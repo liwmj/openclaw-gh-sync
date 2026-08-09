@@ -50,7 +50,7 @@ export async function runSetupWizard(opts: {
 
   const repoRes = await prompts.text({ message: "GitHub repository URL (https://github.com/owner/repo)" });
   if (isCancel(repoRes)) abort("repo");
-  const patRes = await prompts.text({ message: "GitHub Personal Access Token (fine-grained, contents:write)" });
+  const patRes = await prompts.text({ message: "GitHub Personal Access Token (Fine-grained: Contents=Read+Write, or Classic: repo scope)" });
   if (isCancel(patRes)) abort("PAT");
   const instanceNameRawRes = await prompts.text({ message: "Instance name" });
   if (isCancel(instanceNameRawRes)) abort("instance name");

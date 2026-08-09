@@ -34,7 +34,7 @@ openclaw gh-sync setup
 | 步骤 | 说明 |
 |---|---|
 | **GitHub 仓库** | 输入 `用户名/仓库名` 即可（如 `liwmj/my-sync-repo`），插件自动补全为 `https://github.com/liwmj/my-sync-repo`。可以是空仓库 |
-| **Personal Access Token** | GitHub 个人访问令牌，需要 `repo`（仓库读写）权限。存储在工作目录下 `.git-credentials` 文件中（权限 0600，不会被提交到仓库） |
+| **Personal Access Token** | GitHub 个人访问令牌。推荐 **Fine-grained token**：仓库权限选"Only select repositories"指定同步仓库，Contents 权限设为"Read and write"。也可用 **Classic token**：勾选 `repo` 范围即可。令牌存储在 `.git-credentials` 中（权限 0600，不会被提交到仓库） |
 | **实例名称** | 当前智能体或场景的标识，如 `coding-assistant`、`writing-tutor`。只能包含小写字母、数字和连字符（最长 40 个字符）。每个实例对应仓库中独立的分支 `instances/<实例名>` |
 | **git-crypt** | 可选加密方案，默认关闭。启用后敏感文件在远程仓库中加密存储。**注意**：需要所有同步设备上都安装 git-crypt 并共享同一把密钥，否则其他设备无法解密文件 |
 
