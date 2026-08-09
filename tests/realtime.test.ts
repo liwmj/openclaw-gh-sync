@@ -73,6 +73,32 @@ describe("SyncEngine", () => {
     cleanup(bareDir, workDir, remoteWork);
   }, 30000);
 
+  it("start() clears the guard on failure so a retry starts the watcher", async () => {
+    const { bareDir, workDir, stateDir, syncDir } = setup();
+    const cfg = { ...DEFAULT_CONFIG, repo: bareDir, branch: "instances/desktop", instanceName: "desktop", pushDebounceMs: 300 };
+    const ops = new GitOps(syncDir, bareDir, cfg.branch, null);
+    let fail = true;
+    const realInit = ops.initRepo.bind(ops);
+    ops.initRepo = async () => {
+      if (fail) {
+        fail = false;
+        throw new Error("boom");
+      }
+      await realInit();
+    };
+    const engine = new SyncEngine({ syncDir, stateDir, config: cfg, gitops: ops, log: () => {}, onError: () => {} });
+
+    await expect(engine.start()).rejects.toThrow("boom");
+
+    await engine.start();
+    await new Promise((r) => setTimeout(r, 1500));
+    writeFileSync(join(stateDir, "workspace", "retry.txt"), "hi");
+    await expect.poll(async () => (await ops.aheadBehind()).ahead, { timeout: 15000, interval: 500 }).toBe(0);
+
+    await engine.stop();
+    cleanup(bareDir, workDir);
+  }, 30000);
+
   it("reports errors via onError instead of crashing when a watched file is deleted", async () => {
     const { bareDir, workDir, stateDir, syncDir } = setup();
     const cfg = { ...DEFAULT_CONFIG, repo: bareDir, branch: "instances/desktop", instanceName: "desktop" };

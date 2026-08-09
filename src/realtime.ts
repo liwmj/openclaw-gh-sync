@@ -41,22 +41,27 @@ export class SyncEngine {
   async start(): Promise<void> {
     if (this.started) return;
     this.started = true;
-    const { syncDir, stateDir, config, gitops, log } = this.deps;
-    log("starting sync engine");
-    await gitops.initRepo();
-    const entries = buildMirrorEntries(stateDir, syncDir, config.include);
-    const excluded = compileExcludes(config.exclude);
-    copyAllToMirror(entries, excluded);
-    await this.syncNow();
+    try {
+      const { syncDir, stateDir, config, gitops, log } = this.deps;
+      log("starting sync engine");
+      await gitops.initRepo();
+      const entries = buildMirrorEntries(stateDir, syncDir, config.include);
+      const excluded = compileExcludes(config.exclude);
+      copyAllToMirror(entries, excluded);
+      await this.syncNow();
 
-    const watchPaths = entries.map((e) => e.source);
-    this.watcher = new FileWatcher(watchPaths, [syncDir, ...config.exclude], (paths) => {
-      void this.onLocalChange(paths);
-    }, config.pushDebounceMs);
-    this.watcher.start();
+      const watchPaths = entries.map((e) => e.source);
+      this.watcher = new FileWatcher(watchPaths, [syncDir, ...config.exclude], (paths) => {
+        void this.onLocalChange(paths);
+      }, config.pushDebounceMs);
+      this.watcher.start();
 
-    this.poller = new Poller(config.pollIntervalSec * 1000, () => this.pullNow());
-    this.poller.start();
+      this.poller = new Poller(config.pollIntervalSec * 1000, () => this.pullNow());
+      this.poller.start();
+    } catch (err) {
+      this.started = false;
+      throw err;
+    }
   }
 
   async stop(): Promise<void> {
