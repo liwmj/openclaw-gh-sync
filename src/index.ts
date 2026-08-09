@@ -22,8 +22,7 @@ export function createPlugin(api: MinimalApi): void {
       registerCommands(program as unknown as CommanderProgram, rt);
     },
     {
-      parentPath: ["gh-sync"],
-      descriptors: [{ name: "gh-sync", description: "OpenClaw GitHub sync and backup", hasSubcommands: true }],
+      descriptors: [{ name: "gh-sync", description: "OpenClaw GitHub sync and backup" }],
     },
   );
 }
