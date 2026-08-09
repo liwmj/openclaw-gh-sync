@@ -129,6 +129,7 @@ export interface CommanderProgram {
 }
 
 export interface CommanderCommand {
+  command(nameAndArgs: string): CommanderCommand;
   description(text: string): CommanderCommand;
   option(flags: string, desc: string): CommanderCommand;
   action(fn: (...args: unknown[]) => void | Promise<void>): void;
@@ -139,28 +140,31 @@ let commandsRegistered = false;
 export function registerCommands(program: CommanderProgram, rt: Runtime): void {
   if (commandsRegistered) return;
   commandsRegistered = true;
-  program.command("status").description("Show config status, sync timestamps, ahead/behind, conflicts").action(async () => {
+
+  const ghSync = program.command("gh-sync").description("OpenClaw GitHub sync and backup");
+
+  ghSync.command("status").description("Show config status, sync timestamps, ahead/behind, conflicts").action(async () => {
     const s = await rt.status();
     console.log(JSON.stringify(s, null, 2));
   });
 
-  program.command("push").description("Force a push cycle immediately").action(async () => {
+  ghSync.command("push").description("Force a push cycle immediately").action(async () => {
     console.log(await rt.pushNow());
   });
 
-  program.command("pull").description("Force a pull cycle immediately").action(async () => {
+  ghSync.command("pull").description("Force a pull cycle immediately").action(async () => {
     console.log(await rt.pullNow());
   });
 
-  program.command("sync").description("Force a full sync cycle (pull + push)").action(async () => {
+  ghSync.command("sync").description("Force a full sync cycle (pull + push)").action(async () => {
     console.log(await rt.syncNow());
   });
 
-  program.command("backup").description("Create and upload a backup archive now").action(async () => {
+  ghSync.command("backup").description("Create and upload a backup archive now").action(async () => {
     console.log(await rt.backupNow());
   });
 
-  program.command("restore [snapshot]")
+  ghSync.command("restore [snapshot]")
     .description("Restore from a backup snapshot")
     .option("--dry-run", "Preview what the restore would change")
     .option("--yes", "Apply the restore without confirmation")
@@ -172,11 +176,11 @@ export function registerCommands(program: CommanderProgram, rt: Runtime): void {
       })();
     });
 
-  program.command("conflicts").description("List active merge conflicts").action(async () => {
+  ghSync.command("conflicts").description("List active merge conflicts").action(async () => {
     console.log(await rt.conflicts());
   });
 
-  program.command("setup").description("Interactive first-time configuration").action(async () => {
+  ghSync.command("setup").description("Interactive first-time configuration").action(async () => {
     console.log(await rt.setup());
   });
 }
