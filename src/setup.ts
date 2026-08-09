@@ -61,7 +61,7 @@ export async function runSetupWizard(opts: {
   if (/^(git@|git:\/\/|ssh:\/\/)/.test(rawRepo)) {
     throw new Error("setup aborted: SSH and git protocol URLs are not supported. Use https://github.com/username/repo or just username/repo");
   }
-  if (!/^https?:\/\//.test(rawRepo)) {
+  if (!/^https?:\/\//i.test(rawRepo)) {
     rawRepo = rawRepo.replace(/^\/+/, "").replace(/^github\.com\//, "");
     rawRepo = `https://github.com/${rawRepo}`;
   }

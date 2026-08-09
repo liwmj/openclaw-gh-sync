@@ -60,8 +60,8 @@ export class BackupEngine {
       .map((f) => join(backupsDir, f));
     if (files.length <= retain) return;
     const sorted = files
-      .filter((f) => { try { return true; } catch { return false; } })
-      .sort((a, b) => { try { return statSync(b).mtimeMs - statSync(a).mtimeMs; } catch { return 0; } });
+      .filter((f) => { try { statSync(f); return true; } catch { return false; } })
+      .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
     const toDelete = sorted.slice(retain);
     for (const f of toDelete) unlinkSync(f);
     const changed = await gitops.commitChanged(`Backup retention: removed ${toDelete.length} old archive(s)`);

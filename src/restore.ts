@@ -1,4 +1,4 @@
-import { cpSync, existsSync, lstatSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, lstatSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
@@ -44,15 +44,21 @@ export class RestoreEngine {
         throw new Error(`no remote instance: ${opts.fromInstance}`);
       }
       await gitops.ensureBranch(branch);
-      archive = latestLocal(join(syncDir, "backups"));
-      if (!archive) {
+      const remoteArchive = latestLocal(join(syncDir, "backups"));
+      if (!remoteArchive) {
         await gitops.ensureBranch(this.deps.ownBranch);
         throw new Error("no snapshot available");
       }
+      const tmpDir = mkdtempSync(join(tmpdir(), "openclaw-restore-archive-"));
+      const tmpArchive = join(tmpDir, remoteArchive.split(/[\\/]/).pop()!);
+      copyFileSync(remoteArchive, tmpArchive);
+      await gitops.ensureBranch(this.deps.ownBranch);
+      archive = tmpArchive;
     }
     if (!archive || !existsSync(archive)) throw new Error("no snapshot available");
     const verified = await verifyArchive(archive);
     const staging = mkdtempSync(join(tmpdir(), "openclaw-restore-"));
+    const tmpArchiveDir = opts.fromInstance ? archive.replace(/[\\/][^\\/]+$/, "") : null;
     try {
       const res = spawnSync("tar", ["-xzf", archive, "-C", staging], { stdio: "ignore" });
       if (res.status !== 0) throw new Error("archive extraction failed");
@@ -72,9 +78,7 @@ export class RestoreEngine {
       return { snapshot: archive, verified, staged: "", changedPaths, applied: true };
     } finally {
       rmSync(staging, { recursive: true, force: true });
-      if (opts.fromInstance) {
-        await gitops.ensureBranch(this.deps.ownBranch).catch(() => {});
-      }
+      if (tmpArchiveDir) rmSync(tmpArchiveDir, { recursive: true, force: true });
     }
   }
 }
