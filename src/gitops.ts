@@ -97,9 +97,7 @@ export class GitOps {
     return { ahead: Number.parseInt(ahead, 10) || 0, behind: Number.parseInt(behind, 10) || 0 };
   }
 
-  async mergeRemote(policy: "ours" | "theirs"): Promise<"merged" | "conflict" | "clean"> {
-    const before = await this.git.status();
-    if (before.isClean()) return "clean";
+  async mergeRemote(policy: "ours" | "theirs"): Promise<"merged" | "conflict"> {
     const flag = policy === "ours" ? "-Xours" : "-Xtheirs";
     try {
       await this.git.merge([flag, `origin/${this.branch}`]);

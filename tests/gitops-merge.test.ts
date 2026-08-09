@@ -27,7 +27,30 @@ describe("GitOps merge/pull", () => {
     cleanup(bareDir, a.syncDir, b.syncDir);
   });
 
-  it("reports conflict when local and remote change same file", async () => {
+  it("reports conflict when local uncommitted change blocks fast-forward", async () => {
+    const { bareDir, url } = makeBareRepo();
+    const branch = "instances/a";
+    const a = new GitOps(makeWorkDir(), url, branch, null);
+    await a.initRepo();
+    mkdirSync(join(a.syncDir, "openclaw"), { recursive: true });
+    writeFileSync(join(a.syncDir, "openclaw", "f.txt"), "base");
+    await a.commitChanged("base");
+    await a.push();
+
+    const b = new GitOps(makeWorkDir(), url, branch, null);
+    await b.initRepo();
+    writeFileSync(join(b.syncDir, "openclaw", "f.txt"), "remote");
+    await b.commitChanged("remote");
+    await b.push();
+
+    writeFileSync(join(a.syncDir, "openclaw", "f.txt"), "local");
+    const out = await a.pull();
+    expect(out.status).toBe("conflict");
+    expect(readFileSync(join(a.syncDir, "openclaw", "f.txt"), "utf8")).toBe("local");
+    cleanup(bareDir, a.syncDir, b.syncDir);
+  });
+
+  it("merges remote changes when local and remote both committed", async () => {
     const { bareDir, url } = makeBareRepo();
     const branch = "instances/a";
     const a = new GitOps(makeWorkDir(), url, branch, null);
@@ -46,7 +69,8 @@ describe("GitOps merge/pull", () => {
     writeFileSync(join(a.syncDir, "openclaw", "f.txt"), "local");
     await a.commitChanged("local");
     const out = await a.pull();
-    expect(out.status).toBe("conflict");
+    expect(out.status).toBe("ok");
+    expect(readFileSync(join(a.syncDir, "openclaw", "f.txt"), "utf8")).toBe("remote");
     cleanup(bareDir, a.syncDir, b.syncDir);
   });
 });
