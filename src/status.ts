@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { backupsDir } from "./paths.js";
 import { listSnapshots } from "./restore.js";
@@ -22,9 +23,14 @@ export async function buildStatus(deps: StatusDeps): Promise<SyncStatus> {
   let behind = 0;
   let isSyncing = false;
   if (deps.gitops && cfg) {
-    const ab = await deps.gitops.aheadBehind();
-    ahead = ab.ahead;
-    behind = ab.behind;
+    try {
+      const ab = await deps.gitops.aheadBehind();
+      ahead = ab.ahead;
+      behind = ab.behind;
+    } catch {
+      ahead = 0;
+      behind = 0;
+    }
     isSyncing = engine?.isSyncing ?? false;
   }
   return {
@@ -41,7 +47,7 @@ export async function buildStatus(deps: StatusDeps): Promise<SyncStatus> {
     ahead,
     behind,
     gitCrypt: deps.gitCrypt,
-    conflictFiles: findConflictFiles(deps.syncDir),
+    conflictFiles: existsSync(deps.syncDir) ? findConflictFiles(deps.syncDir) : [],
     backups: listSnapshots(join(deps.syncDir, "backups")),
     pollIntervalSec: cfg?.pollIntervalSec ?? 60,
     backupIntervalH: cfg?.backupIntervalH ?? 6,
