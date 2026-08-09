@@ -39,15 +39,15 @@ export class GitOps {
     if (branches.current === name) return;
     if (branches.all.includes(name)) {
       if (await this.remoteRefExists(name)) {
-        await this.git.checkout(["-B", name, `origin/${name}`]);
+        await this.git.checkout(["-f", "-B", name, `origin/${name}`]);
       } else {
-        await this.git.checkout(name);
+        await this.git.checkout(["-f", name]);
       }
       return;
     }
     const existing = await this.remoteRefExists(name);
     if (existing) {
-      await this.git.checkout(["-B", name, `origin/${name}`]);
+      await this.git.checkout(["-f", "-B", name, `origin/${name}`]);
     } else {
       await this.git.checkoutLocalBranch(name);
     }
