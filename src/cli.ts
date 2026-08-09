@@ -1,6 +1,8 @@
 import { join } from "node:path";
 import { ConfigService } from "./config.js";
-import { stateDir, ghSyncDir, configPath, credentialsPath } from "./paths.js";
+import { buildMirrorEntries, ghSyncDir, configPath, credentialsPath } from "./paths.js";
+import { compileExcludes } from "./exclude.js";
+import { copyMirrorToSources } from "./mirror.js";
 import { buildStatus } from "./status.js";
 import { createGitOps, SyncEngine } from "./realtime.js";
 import { BackupEngine } from "./backup.js";
@@ -84,7 +86,13 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
         if (cfg.syncStrategy === "replace-local" && gitops) {
           try {
             if (await gitops.fetchBranch(cfg.branch)) {
-              await restoreEngine!.restore({ fromInstance: cfg.instanceName, yes: true });
+              const restored = await restoreEngine!.restore({ fromInstance: cfg.instanceName, yes: true }).catch(() => null);
+              if (!restored) {
+                await gitops.forceAcceptRemote(cfg.branch);
+                const entries = buildMirrorEntries(state, sync, cfg.include);
+                const excluded = compileExcludes(cfg.exclude);
+                copyMirrorToSources(entries, excluded);
+              }
             }
           } catch { /* remote unreachable or no data — proceed normally */ }
           cfg.syncStrategy = "merge";
