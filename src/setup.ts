@@ -1,6 +1,7 @@
-import { join } from "node:path";
+import { isCancel } from "@clack/prompts";
 import { sanitizeInstanceName, type ConfigService } from "./config.js";
 import { DEFAULT_CONFIG } from "./config.js";
+import { credentialsPath, ghSyncDir } from "./paths.js";
 import type { SyncConfig } from "./types.js";
 
 export interface SetupPlan {
@@ -40,9 +41,20 @@ export async function runSetupWizard(opts: {
   };
 }): Promise<SyncConfig> {
   const { prompts, io } = opts;
-  const repo = String(await prompts.text({ message: "GitHub repository URL (https://github.com/owner/repo)" }));
-  const pat = String(await prompts.text({ message: "GitHub Personal Access Token (fine-grained, contents:write)" }));
-  const instanceNameRaw = String(await prompts.text({ message: "Instance name" }));
+
+  const abort = (what: string): never => {
+    throw new Error(`setup aborted: ${what} cancelled`);
+  };
+
+  const repoRes = await prompts.text({ message: "GitHub repository URL (https://github.com/owner/repo)" });
+  if (isCancel(repoRes)) abort("repo");
+  const patRes = await prompts.text({ message: "GitHub Personal Access Token (fine-grained, contents:write)" });
+  if (isCancel(patRes)) abort("PAT");
+  const instanceNameRawRes = await prompts.text({ message: "Instance name" });
+  if (isCancel(instanceNameRawRes)) abort("instance name");
+  const repo = String(repoRes);
+  const pat = String(patRes);
+  const instanceNameRaw = String(instanceNameRawRes);
 
   const plan = planForSetup({
     instanceNameRaw,
@@ -54,14 +66,16 @@ export async function runSetupWizard(opts: {
   let action: SetupPlan["gitCryptAction"] = plan.gitCryptAction;
   if (action === "skip-sensitive") {
     console.log(GIT_CRYPT_INSTALL_HINT);
-    const choice = (await prompts.select({
+    const choiceRes = await prompts.select({
       message: "git-crypt is missing. How do you want to proceed?",
       options: [
         { value: "init", label: "Install hint — I'll install git-crypt (brew/apt), proceed" },
         { value: "degraded", label: "Degraded mode — sensitive paths stay plaintext" },
         { value: "abort", label: "Abort setup" },
       ],
-    })) as "init" | "degraded" | "abort";
+    });
+    if (isCancel(choiceRes)) abort("git-crypt choice");
+    const choice = choiceRes as "init" | "degraded" | "abort";
     if (choice === "abort") throw new Error("setup aborted: git-crypt required");
     action = choice === "init" ? "init" : "none";
   }
@@ -73,7 +87,9 @@ export async function runSetupWizard(opts: {
     instanceName: plan.instanceName,
     gitCryptEnabled: action === "init",
   };
+  const validation = io.configService.validate(cfg);
+  if (!validation.ok) throw new Error(`setup aborted: invalid config: ${validation.errors.join("; ")}`);
   io.configService.save(cfg);
-  io.writeCredentials(join(io.stateDir, "gh-sync", ".git-credentials"), repo, pat);
+  io.writeCredentials(credentialsPath(ghSyncDir(io.stateDir)), repo, pat);
   return cfg;
 }

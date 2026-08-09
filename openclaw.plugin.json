@@ -7,9 +7,15 @@
     "type": "object",
     "properties": {
       "repo": { "type": "string", "description": "GitHub repo URL (https)" },
+      "branch": { "type": "string", "description": "Branch to sync to, e.g. instances/default" },
       "instanceName": { "type": "string", "description": "Instance name, [a-z0-9-] max 40" },
-      "pollIntervalSec": { "type": "number", "minimum": 5 },
-      "backupIntervalH": { "type": "number", "minimum": 1 }
+      "include": { "type": "array", "items": { "type": "string" }, "description": "Paths under state dir to mirror" },
+      "exclude": { "type": "array", "items": { "type": "string" }, "description": "Glob patterns to exclude from sync" },
+      "pushDebounceMs": { "type": "number", "minimum": 0, "description": "Debounce window for auto-push (ms)" },
+      "pollIntervalSec": { "type": "number", "minimum": 5, "description": "Poll interval for remote changes (s)" },
+      "backupIntervalH": { "type": "number", "minimum": 1, "description": "Scheduled backup interval (h)" },
+      "backupRetain": { "type": "number", "minimum": 1, "description": "Backup archives to retain" },
+      "gitCryptEnabled": { "type": "boolean", "description": "Encrypt sensitive paths with git-crypt" }
     },
     "additionalProperties": false
   }
