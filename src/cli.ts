@@ -87,16 +87,19 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
           try {
             if (await gitops.fetchBranch(cfg.branch)) {
               const restored = await restoreEngine!.restore({ fromInstance: cfg.instanceName, yes: true }).catch(() => null);
-              if (!restored) {
+              if (restored) {
+                cfg.syncStrategy = "merge";
+                cfgService.save(cfg);
+              } else {
                 await gitops.forceAcceptRemote(cfg.branch);
                 const entries = buildMirrorEntries(state, sync, cfg.include);
                 const excluded = compileExcludes(cfg.exclude);
                 copyMirrorToSources(entries, excluded);
+                cfg.syncStrategy = "merge";
+                cfgService.save(cfg);
               }
             }
-          } catch { /* remote unreachable or no data — proceed normally */ }
-          cfg.syncStrategy = "merge";
-          cfgService.save(cfg);
+          } catch { /* remote unreachable — retry next startup */ }
         }
         await engine!.start();
       } catch (e) {
