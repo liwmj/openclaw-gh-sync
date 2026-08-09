@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { GitOps } from "../src/gitops.js";
 import { cleanup, makeBareRepo, makeWorkDir } from "./helpers/git-env.js";
@@ -42,6 +42,38 @@ describe("GitOps instance branch operations", () => {
     await opsB.initRepo();
     expect(await opsB.fetchBranch("instances/dev")).toBe(true);
     expect(await opsB.fetchBranch("instances/missing")).toBe(false);
+    cleanup(bareDir, a, b);
+  });
+  it("resets a stale local branch to the remote state on ensureBranch", async () => {
+    const { bareDir, url } = makeBareRepo();
+    const a = makeWorkDir();
+    const opsA = new GitOps(a, url, "main", null);
+    await opsA.initRepo();
+    writeFileSync(join(a, "stale.txt"), "v1");
+    await opsA.commitChanged("v1");
+    await opsA.push();
+    await opsA.ensureBranch("instances/dev");
+    writeFileSync(join(a, "stale.txt"), "v2");
+    await opsA.commitChanged("v2");
+    await opsA.pushCurrent();
+
+    const b = makeWorkDir();
+    const opsB = new GitOps(b, url, "main", null);
+    await opsB.initRepo();
+    await opsB.fetchBranch("instances/dev");
+    await opsB.ensureBranch("instances/dev");
+    const stale = readFileSync(join(b, "stale.txt"), "utf8");
+    expect(stale).toBe("v2");
+
+    writeFileSync(join(a, "stale.txt"), "v3");
+    await opsA.commitChanged("v3");
+    await opsA.pushCurrent();
+
+    await opsB.ensureBranch("main");
+    await opsB.fetchBranch("instances/dev");
+    await opsB.ensureBranch("instances/dev");
+    const fresh = readFileSync(join(b, "stale.txt"), "utf8");
+    expect(fresh).toBe("v3");
     cleanup(bareDir, a, b);
   });
 });

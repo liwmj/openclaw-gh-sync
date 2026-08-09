@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { listSnapshots, RestoreEngine, walkForPreview } from "../src/restore.js";
 import { GitOps } from "../src/gitops.js";
-import { cleanup, makeBareRepo, makeWorkDir } from "./helpers/git-env.js";
+import { cleanup, makeBareRepo } from "./helpers/git-env.js";
 
 describe("restore", () => {
   it("lists tar.gz snapshots", () => {
@@ -99,7 +99,7 @@ describe("restore", () => {
       expect(await ops.fetch()).toBe(true);
       expect(await ops.aheadBehind()).toEqual({ ahead: 0, behind: 0 });
     } finally {
-      process.env.PATH = prevPath;
+      if (prevPath !== undefined) process.env.PATH = prevPath; else delete process.env.PATH;
       cleanup(bareDir, stateDir, snapRoot, binDir);
     }
   });

@@ -42,7 +42,11 @@ export class GitOps {
     const branches = await this.git.branchLocal();
     if (branches.current === name) return;
     if (branches.all.includes(name)) {
-      await this.git.checkout(name);
+      if (await this.remoteRefExists(name)) {
+        await this.git.checkout(["-B", name, `origin/${name}`]);
+      } else {
+        await this.git.checkout(name);
+      }
       return;
     }
     const existing = await this.remoteRefExists(name);
