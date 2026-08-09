@@ -60,6 +60,9 @@ export class SyncEngine {
       this.poller.start();
     } catch (err) {
       this.started = false;
+      await this.watcher?.stop();
+      this.watcher = null;
+      this.poller = null;
       throw err;
     }
   }
