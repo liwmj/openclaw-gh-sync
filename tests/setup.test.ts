@@ -38,6 +38,7 @@ describe("runSetupWizard", () => {
     return {
       io: {
         stateDir: "/state",
+        syncDir: "/state/gh-sync",
         configService: {
           validate: (raw: unknown) => {
             if (typeof raw !== "object" || raw === null) return { ok: false, errors: ["config is not an object"] };
@@ -91,7 +92,7 @@ describe("runSetupWizard", () => {
 
   it("writes credentials under the gh-sync credentials path and returns a validated config", async () => {
     const { io, saved, written } = makeIo();
-    const cfg = await runSetupWizard({ prompts: makePrompts(["https://github.com/u/r.git", "pat-123", "Box", "merge"]), io });
+    const cfg = await runSetupWizard({ prompts: makePrompts(["https://github.com/u/r.git", "pat-123", "Box", "merge", "degraded"]), io });
     expect(saved).toHaveLength(1);
     expect(cfg.repo).toBe("https://github.com/u/r.git");
     expect(cfg.branch).toBe("instances/box");

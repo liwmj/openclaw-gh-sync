@@ -113,6 +113,7 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
         prompts: { text, confirm, select },
         io: {
           stateDir: state,
+          syncDir: sync,
           configService: new ConfigService(configPath(sync)),
           gitCryptAvailable,
           writeCredentials,

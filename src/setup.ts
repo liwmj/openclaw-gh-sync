@@ -2,6 +2,7 @@ import { isCancel } from "@clack/prompts";
 import { sanitizeInstanceName, type ConfigService } from "./config.js";
 import { DEFAULT_CONFIG } from "./config.js";
 import { credentialsPath, ghSyncDir } from "./paths.js";
+import { gitCryptInit, writeGitattributes, SENSITIVE_GLOBS } from "./gitcrypt.js";
 import type { SyncConfig } from "./types.js";
 
 export interface SetupPlan {
@@ -35,6 +36,7 @@ export async function runSetupWizard(opts: {
   prompts: Pick<typeof import("@clack/prompts"), "text" | "confirm" | "select">;
   io: {
     stateDir: string;
+    syncDir: string;
     configService: ConfigService;
     gitCryptAvailable: () => boolean;
     writeCredentials: (file: string, repo: string, pat: string) => void;
@@ -88,6 +90,24 @@ export async function runSetupWizard(opts: {
     const choice = choiceRes as "init" | "degraded" | "abort";
     if (choice === "abort") throw new Error("setup aborted: git-crypt required");
     action = choice === "init" ? "init" : "none";
+  }
+
+  if (action === "init") {
+    try {
+      const { mkdirSync } = await import("node:fs");
+      const { execFileSync } = await import("node:child_process");
+      mkdirSync(io.syncDir, { recursive: true });
+      execFileSync("git", ["init", "--quiet"], { cwd: io.syncDir, stdio: "ignore" });
+      gitCryptInit(io.syncDir);
+      writeGitattributes(io.syncDir, SENSITIVE_GLOBS);
+      console.log("git-crypt initialized. Export and back up the key:");
+      console.log(`  cd ${io.syncDir}`);
+      console.log("  git-crypt export-key /secure/location/gh-sync.key");
+      console.log("Share this key with all devices that need to decrypt.");
+    } catch (err) {
+      console.log(`git-crypt init failed: ${String(err)}. Proceeding without encryption.`);
+      action = "none";
+    }
   }
 
   const cfg: SyncConfig = {
