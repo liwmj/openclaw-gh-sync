@@ -58,9 +58,14 @@ export async function runSetupWizard(opts: {
   const pat = String(patRes);
   const instanceNameRaw = String(instanceNameRawRes);
   let rawRepo = String(repoRes);
-  if (!/^https?:\/\//.test(rawRepo)) {
-    rawRepo = `https://github.com/${rawRepo.replace(/^\/+/, "")}`;
+  if (/^(git@|git:\/\/|ssh:\/\/)/.test(rawRepo)) {
+    throw new Error("setup aborted: SSH and git protocol URLs are not supported. Use https://github.com/username/repo or just username/repo");
   }
+  if (!/^https?:\/\//.test(rawRepo)) {
+    rawRepo = rawRepo.replace(/^\/+/, "").replace(/^github\.com\//, "");
+    rawRepo = `https://github.com/${rawRepo}`;
+  }
+  rawRepo = rawRepo.replace(/\.git$/, "");
   const repo = rawRepo;
 
   const gitCryptRes = await prompts.confirm({
@@ -135,7 +140,7 @@ export async function runSetupWizard(opts: {
   };
   const validation = io.configService.validate(cfg);
   if (!validation.ok) throw new Error(`setup aborted: invalid config: ${validation.errors.join("; ")}`);
-  io.configService.save(cfg);
   io.writeCredentials(credentialsPath(ghSyncDir(io.stateDir)), repo, pat);
+  io.configService.save(cfg);
   return cfg;
 }

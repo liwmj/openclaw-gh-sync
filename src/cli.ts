@@ -43,7 +43,7 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
     gitops = await createGitOps(cfg, sync, cred);
     engine = new SyncEngine({ stateDir: state, syncDir: sync, config: cfg, gitops, log: (m) => console.log(m), onError: (e) => { lastError = String(e); } });
     backupEngine = new BackupEngine({ stateDir: state, syncDir: sync, backupsDir: join(sync, "backups"), retain: cfg.backupRetain, gitops, log: (m) => console.log(m) });
-    restoreEngine = new RestoreEngine({ syncDir: sync, stateDir: state, gitops, log: (m) => console.log(m) });
+    restoreEngine = new RestoreEngine({ syncDir: sync, stateDir: state, gitops, ownBranch: cfg.branch, log: (m) => console.log(m) });
     return { cfg };
   }
 
@@ -95,7 +95,11 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
       }
     },
     async stop() {
-      await engine?.stop();
+      try {
+        await engine?.stop();
+      } catch {
+        // engine cleanup failed — still null references
+      }
       engine = null;
       backupEngine = null;
       restoreEngine = null;
@@ -128,8 +132,8 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
           writeCredentials,
           hasRemoteInstance: async (_repo: string, pat: string, branch: string): Promise<boolean> => {
             try {
-              const base = /^https?:\/\//.test(_repo) ? _repo : `https://github.com/${_repo.replace(/^\/+/, "")}`;
-              const url = base.replace("https://", `https://x-access-token:${encodeURIComponent(pat)}@`);
+              const base = /^https?:\/\//.test(_repo) ? _repo : `https://github.com/${_repo.replace(/^\/+/, "").replace(/^github\.com\//, "")}`;
+              const url = base.replace(/\.git$/, "").replace("https://", `https://x-access-token:${encodeURIComponent(pat)}@`);
               const { execFileSync } = await import("node:child_process");
               const out = execFileSync("git", ["ls-remote", "--heads", url, `refs/heads/${branch}`], { encoding: "utf8", timeout: 5000 });
               return out.trim().length > 0;

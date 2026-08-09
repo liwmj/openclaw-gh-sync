@@ -13,6 +13,7 @@ export interface RestoreDeps {
     commitChanged(message: string): Promise<boolean>;
     pushCurrent(): Promise<void>;
   };
+  ownBranch: string;
   log: (m: string) => void;
 }
 
@@ -44,6 +45,10 @@ export class RestoreEngine {
       }
       await gitops.ensureBranch(branch);
       archive = latestLocal(join(syncDir, "backups"));
+      if (!archive) {
+        await gitops.ensureBranch(this.deps.ownBranch);
+        throw new Error("no snapshot available");
+      }
     }
     if (!archive || !existsSync(archive)) throw new Error("no snapshot available");
     const verified = await verifyArchive(archive);
@@ -67,6 +72,9 @@ export class RestoreEngine {
       return { snapshot: archive, verified, staged: "", changedPaths, applied: true };
     } finally {
       rmSync(staging, { recursive: true, force: true });
+      if (opts.fromInstance) {
+        await gitops.ensureBranch(this.deps.ownBranch).catch(() => {});
+      }
     }
   }
 }

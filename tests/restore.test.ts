@@ -38,6 +38,7 @@ describe("restore", () => {
     const engine = new RestoreEngine({
       syncDir: dir,
       stateDir: dir,
+      ownBranch: "main",
       gitops: {
         ensureBranch: async () => {},
         fetchBranch: async () => false,
@@ -55,6 +56,7 @@ describe("restore", () => {
     const engine = new RestoreEngine({
       syncDir: dir,
       stateDir: dir,
+      ownBranch: "main",
       gitops: {
         ensureBranch: async () => {},
         fetchBranch: async () => true,
@@ -89,6 +91,7 @@ describe("restore", () => {
       const engine = new RestoreEngine({
         syncDir,
         stateDir,
+        ownBranch: "main",
         gitops: ops,
         log: () => {},
       });
@@ -149,6 +152,7 @@ describe("restore", () => {
     const engine = new RestoreEngine({
       syncDir: dir,
       stateDir: dir,
+      ownBranch: "main",
       gitops: {
         ensureBranch: async () => {},
         fetchBranch: async () => { throw new Error("network unreachable"); },

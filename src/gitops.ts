@@ -145,7 +145,10 @@ export class GitOps {
     const result = await this.mergeRemote("theirs");
     if (result === "conflict") {
       await this.acceptRemoteForConflicts();
-      await this.git.commit("Resolve conflicts: accept remote");
+      const status = await this.git.status();
+      if (!status.isClean()) {
+        await this.git.commit("Resolve conflicts: accept remote");
+      }
     }
     return { status: "ok", changedFiles };
   }

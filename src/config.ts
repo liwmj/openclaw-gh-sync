@@ -70,6 +70,7 @@ export class ConfigService {
     if (typeof cfg.branch !== "string" || !cfg.branch.startsWith("instances/")) errors.push("branch must start with instances/");
     if (typeof cfg.pollIntervalSec !== "number" || cfg.pollIntervalSec < 5) errors.push("pollIntervalSec >= 5");
     if (typeof cfg.backupIntervalH !== "number" || cfg.backupIntervalH < 1) errors.push("backupIntervalH >= 1");
+    if (cfg.syncStrategy !== undefined && cfg.syncStrategy !== "merge" && cfg.syncStrategy !== "replace-local") errors.push("syncStrategy must be merge or replace-local");
     return { ok: errors.length === 0, errors };
   }
 }

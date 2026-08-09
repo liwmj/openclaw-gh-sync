@@ -90,11 +90,11 @@ describe("runSetupWizard", () => {
     const { io, saved, written } = makeIo();
     const cfg = await runSetupWizard({ prompts: makePrompts(["https://github.com/u/r.git", "pat-123", "Box", "degraded"]), io });
     expect(saved).toHaveLength(1);
-    expect(cfg.repo).toBe("https://github.com/u/r.git");
+    expect(cfg.repo).toBe("https://github.com/u/r");
     expect(cfg.branch).toBe("instances/box");
     expect(cfg.instanceName).toBe("box");
     expect(cfg.syncStrategy).toBe("merge");
-    expect(written).toEqual([{ file: "/state/gh-sync/.git-credentials", repo: "https://github.com/u/r.git", pat: "pat-123" }]);
+    expect(written).toEqual([{ file: "/state/gh-sync/.git-credentials", repo: "https://github.com/u/r", pat: "pat-123" }]);
   });
 
   it("shows strategy prompt when remote has existing instance data", async () => {
@@ -102,6 +102,6 @@ describe("runSetupWizard", () => {
     io.hasRemoteInstance = async () => true;
     const cfg = await runSetupWizard({ prompts: makePrompts(["https://github.com/u/r.git", "pat-123", "Box", "replace-local", "degraded"]), io });
     expect(cfg.syncStrategy).toBe("replace-local");
-    expect(cfg.repo).toBe("https://github.com/u/r.git");
+    expect(cfg.repo).toBe("https://github.com/u/r");
   });
 });
