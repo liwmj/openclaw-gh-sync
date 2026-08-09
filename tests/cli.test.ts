@@ -115,21 +115,24 @@ describe("CLI runtime", () => {
 });
 
 describe("registerCommands", () => {
-  it("registers all 9 CLI commands with descriptions", () => {
+  it("registers all 9 CLI commands under gh-sync", () => {
     const registered: { name: string; desc: string }[] = [];
-    const program = {
-      command(name: string) {
-        const self = {
-          description(desc: string) {
-            registered.push({ name, desc });
-            return self;
-          },
-          option(_flags: string, _desc: string) { return self; },
-          action: () => {},
-        };
-        return self;
-      },
-    };
+    function makeCommand(name?: string) {
+      return {
+        command(cmdName: string) {
+          if (!name) return makeCommand(cmdName);
+          const child = makeCommand(cmdName);
+          return child;
+        },
+        description(desc: string) {
+          if (name) registered.push({ name, desc });
+          return this;
+        },
+        option() { return this; },
+        action: () => {},
+      };
+    }
+    const program = { command: () => makeCommand() };
     const rt = {
       status: async () => ({ configured: false } as never),
       syncNow: async () => "",
