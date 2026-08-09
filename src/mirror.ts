@@ -8,11 +8,7 @@ export function fileEq(a: string, b: string): boolean {
   const sb = statSync(b);
   if (sa.size !== sb.size) return false;
   if (sa.mtimeMs === sb.mtimeMs) return true;
-  return readFileBytes(a) === readFileBytes(b);
-}
-
-function readFileBytes(p: string): string {
-  return readFileSync(p, "utf8");
+  return readFileSync(a).equals(readFileSync(b));
 }
 
 function copyDirIfChanged(srcDir: string, tgtDir: string, excluded: (rel: string) => boolean, root: string): number {

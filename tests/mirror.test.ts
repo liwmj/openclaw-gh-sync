@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { copyAllToMirror, copyMirrorToSources } from "../src/mirror.js";
+import { copyAllToMirror, copyMirrorToSources, fileEq } from "../src/mirror.js";
 import type { MirrorEntry } from "../src/types.js";
 
 function entry(srcRoot: string, tgtRoot: string, rel: string): MirrorEntry {
@@ -33,5 +33,18 @@ describe("mirror", () => {
     expect(copyAllToMirror(entries, (rel) => rel.endsWith(".log"))).toBe(0);
     rmSync(src, { recursive: true, force: true });
     rmSync(tgt, { recursive: true, force: true });
+  });
+  it("fileEq distinguishes byte-distinct binary content", () => {
+    const a = join(tmpdir(), `feq-a-${Date.now()}.bin`);
+    const b = join(tmpdir(), `feq-b-${Date.now()}.bin`);
+    const ta = new Date("2020-01-01T00:00:00Z");
+    const tb = new Date("2020-01-02T00:00:00Z");
+    writeFileSync(a, Buffer.from([0xff]));
+    writeFileSync(b, Buffer.from([0xfe]));
+    utimesSync(a, ta, ta);
+    utimesSync(b, tb, tb);
+    expect(fileEq(a, b)).toBe(false);
+    rmSync(a, { force: true });
+    rmSync(b, { force: true });
   });
 });
