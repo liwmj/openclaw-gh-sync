@@ -5,12 +5,20 @@ import { copyAllToMirror, copyMirrorToSources, copyToMirror } from "./mirror.js"
 import { GitOps } from "./gitops.js";
 import { FileWatcher } from "./watcher.js";
 import { Poller } from "./poller.js";
+import { rmSync } from "node:fs";
+import type { MirrorEntry } from "./types.js";
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`operation timed out after ${ms}ms`)), ms);
     p.then((v) => { clearTimeout(timer); resolve(v); }, (e) => { clearTimeout(timer); reject(e); });
   });
+}
+
+function cleanMirror(entries: MirrorEntry[]): void {
+  for (const entry of entries) {
+    try { rmSync(entry.target, { recursive: true, force: true }); } catch {}
+  }
 }
 
 export interface SyncDeps {
@@ -65,6 +73,7 @@ export class SyncEngine {
         await gitops.initRepo();
         const entries = buildMirrorEntries(stateDir, syncDir, config.include);
         const excluded = compileExcludes(config.exclude);
+        cleanMirror(entries);
         copyAllToMirror(entries, excluded);
         await this.syncNow();
 
