@@ -40,7 +40,7 @@ export async function runSetupWizard(opts: {
     configService: ConfigService;
     gitCryptAvailable: () => boolean;
     writeCredentials: (file: string, repo: string, pat: string) => void;
-    hasRemoteInstance: (repo: string, branch: string) => Promise<boolean>;
+    hasRemoteInstance: (repo: string, pat: string, branch: string) => Promise<boolean>;
   };
 }): Promise<SyncConfig> {
   const { prompts, io } = opts;
@@ -64,7 +64,8 @@ export async function runSetupWizard(opts: {
   const repo = rawRepo;
 
   const gitCryptRes = await prompts.confirm({
-    message: "Enable git-crypt encryption for sensitive files? (recommended if all devices have git-crypt)",
+    message: "Enable git-crypt encryption for sensitive files?",
+    initialValue: false,
   });
   const wantsGitCrypt = !isCancel(gitCryptRes) && gitCryptRes === true;
 
@@ -76,7 +77,7 @@ export async function runSetupWizard(opts: {
   });
 
   let syncStrategy: SyncConfig["syncStrategy"] = "merge";
-  const hasRemote = await io.hasRemoteInstance(repo, plan.branch).catch(() => false);
+  const hasRemote = await io.hasRemoteInstance(repo, pat, plan.branch).catch(() => false);
   if (hasRemote) {
     const strategyRes = await prompts.select({
       message: `Remote already has data for instance "${plan.instanceName}". How should sync handle it?`,
