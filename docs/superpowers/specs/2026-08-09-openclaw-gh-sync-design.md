@@ -193,10 +193,23 @@ gitCryptEnabled  true（未装 git-crypt 时降级：警告并跳过敏感路径
 ## 11. 非目标（YAGNI）
 
 - 不做 P2P 同步（参考项目有，本插件仅 GitHub）。
+- **v1 不做 Tailscale 局域网直连**（见 §11.1 扩展性预留：GitOps 对 remote 抽象化，后续可作为配置级扩展加入，非重写）。
 - 不做 AI 自然语言技能（后续可加）。
 - 不做每实例独立 git-crypt 密钥（需拆独立仓库）。
 - 不做多仓库管理。
 - 不做增量 WAL bundle 同步（官方 backup sqlite 明确排除在外）。
+
+### 11.1 扩展性预留：Tailscale 局域网直连（v2 候选）
+
+场景：多机器在局域网/Tailnet 内，希望在 GitHub 之外获得近实时（5-10s）且离线可用的直连同步，且不引入自研 P2P 协议。
+
+预留设计（v1 不实现，但 GitOps 按此保持 remote 抽象）：
+
+- **remote 抽象化**：当前 `origin`（GitHub）写死；v1 要求 GitOps 对 remote 列表迭代，不假设唯一 remote。
+- **本地 hub 模式**：指定一台 tailnet 机器维护 bare repo（`~/gh-sync-hub.git`），经 `ssh://` + Tailscale SSH 认证暴露；其他机器加为第二 remote `ts-<hostname>`。
+- **动态轮询**：轮询间隔按可达性自适应——本地 hub 可达时 5-10s 短轮询，不可达时回退 GitHub 60s。
+- **双推双拉**：push 同时发往 GitHub + 可达本地 hub；merge/冲突处理完全复用现有机制。
+- 依赖：机器同属一个 tailnet；hub 机器在线时短轮询生效，离线由 GitHub 兜底。
 
 ## 12. 风险与开放问题
 
