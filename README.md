@@ -36,7 +36,7 @@ openclaw gh-sync setup
 | **GitHub 仓库** | 输入 `用户名/仓库名` 即可（如 `liwmj/my-sync-repo`），插件自动补全为 `https://github.com/liwmj/my-sync-repo`。可以是空仓库 |
 | **Personal Access Token** | GitHub 个人访问令牌，需要 `repo`（仓库读写）权限。存储在工作目录下 `.git-credentials` 文件中（权限 0600，不会被提交到仓库） |
 | **实例名称** | 当前智能体或场景的标识，如 `coding-assistant`、`writing-tutor`。只能包含小写字母、数字和连字符（最长 40 个字符）。每个实例对应仓库中独立的分支 `instances/<实例名>` |
-| **git-crypt** | 可选加密方案。如果安装了 git-crypt，推荐启用，敏感文件在远程仓库中会以加密形式存储 |
+| **git-crypt** | 可选加密方案，默认关闭。启用后敏感文件在远程仓库中加密存储。**注意**：需要所有同步设备上都安装 git-crypt 并共享同一把密钥，否则其他设备无法解密文件 |
 
 配置完成后，每次 OpenClaw 网关启动时会自动启动同步引擎。使用 `openclaw gh-sync status` 查看运行状态。
 
@@ -134,7 +134,7 @@ openclaw gh-sync restore backup-2026-08-10.tar.gz --yes
   "pollIntervalSec": 60,                       // 远程拉取间隔（秒），最小 5 秒
   "backupIntervalH": 6,                        // 定时备份间隔（小时），最小 1 小时
   "backupRetain": 7,                           // 保留最近多少个备份存档（超出自动删除）
-  "gitCryptEnabled": true                      // 是否启用 git-crypt 加密
+  "gitCryptEnabled": false                     // 是否启用 git-crypt 加密（默认关闭）
 }
 ```
 
@@ -162,11 +162,12 @@ openclaw gh-sync restore backup-2026-08-10.tar.gz --yes
 
 - **PAT 凭证**：存储在 `.git-credentials` 文件中，权限 0600（仅所有者可读写），已加入 `.gitignore`，不会被提交到远程仓库
 - **仓库 URL**：强制要求 `https://github.com/*` 格式，不允许 SSH 地址或明文密码
-- **git-crypt 加密**：启用后远程仓库中的镜像文件处于加密状态。请务必妥善保存加密密钥：
+- **git-crypt 加密**：默认关闭。如需启用，所有同步设备必须安装 git-crypt 并共享同一把密钥，否则加密文件无法解密。导出并备份密钥：
   ```bash
   cd ~/.openclaw/gh-sync
   git-crypt export-key /安全位置/gh-sync.key
   ```
+  其他设备导入：`git-crypt unlock /安全位置/gh-sync.key`
 
 ## 常见问题
 

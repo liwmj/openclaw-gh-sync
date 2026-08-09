@@ -27,7 +27,7 @@ export const DEFAULT_CONFIG: SyncConfig = {
   pollIntervalSec: 60,
   backupIntervalH: 6,
   backupRetain: 10,
-  gitCryptEnabled: true,
+  gitCryptEnabled: false,
   syncStrategy: "merge",
 };
 
