@@ -23,7 +23,7 @@ export function listSnapshots(backupsDir: string): string[] {
 
 export function verifyArchive(archivePath: string): Promise<boolean> {
   return new Promise((resolve) => {
-    const res = spawnSync("openclaw", ["backup", "verify", archivePath], { stdio: "ignore" });
+    const res = spawnSync(process.env.GH_SYNC_BACKUP_CLI || "openclaw", ["backup", "verify", archivePath], { stdio: "ignore" });
     resolve(res.status === 0);
   });
 }

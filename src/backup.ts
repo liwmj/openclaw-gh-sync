@@ -26,7 +26,7 @@ export function runBackupCli(
     return { status: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
   },
 ): string {
-  const res = spawnFn("openclaw", ["backup", "create", "--verify", "--output", outputDir, "--json"]);
+  const res = spawnFn(process.env.GH_SYNC_BACKUP_CLI || "openclaw", ["backup", "create", "--verify", "--output", outputDir, "--json"]);
   if (res.status !== 0) throw new Error(`openclaw backup failed: ${res.stderr}`);
   const parsed = JSON.parse(res.stdout) as { archive?: string };
   if (!parsed.archive) throw new Error("openclaw backup did not return an archive path");
