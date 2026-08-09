@@ -10,7 +10,7 @@ export class GitOps {
     private readonly syncDir: string,
     private readonly repoUrl: string,
     private readonly branch: string,
-    private readonly credentialsFile: string | null,
+    private readonly pat: string | null,
   ) {
     this.git = simpleGit(syncDir);
   }
@@ -20,19 +20,14 @@ export class GitOps {
     if (!isRepo) {
       await this.git.init();
     }
-    if (this.credentialsFile) {
-      await this.git.addConfig("credential.helper", `store --file ${this.credentialsFile}`);
-      await this.git.addConfig("http.version", "HTTP/1.1");
-      await this.git.addConfig("http.lowSpeedLimit", "0");
-      await this.git.addConfig("http.lowSpeedTime", "999999");
-    }
+    const authedUrl = this.pat ? this.repoUrl.replace("https://", `https://x-access-token:${encodeURIComponent(this.pat)}@`) : this.repoUrl;
     const remotes = await this.git.getRemotes(true);
     const origin = remotes.find((r) => r.name === "origin");
     if (!origin) {
-      await this.git.addRemote("origin", this.repoUrl);
-    } else if (origin.refs.fetch !== this.repoUrl) {
+      await this.git.addRemote("origin", authedUrl);
+    } else if (origin.refs.fetch !== authedUrl) {
       await this.git.removeRemote("origin");
-      await this.git.addRemote("origin", this.repoUrl);
+      await this.git.addRemote("origin", authedUrl);
     }
     await this.fetch();
     await this.ensureBranch(this.branch);

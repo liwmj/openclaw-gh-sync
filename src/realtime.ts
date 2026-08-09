@@ -21,8 +21,8 @@ export interface EngineStatus {
   lastPullAt: string | null;
 }
 
-export async function createGitOps(config: SyncConfig, syncDir: string, credentialsFile: string | null): Promise<GitOps> {
-  const ops = new GitOps(syncDir, config.repo, config.branch, credentialsFile);
+export async function createGitOps(config: SyncConfig, syncDir: string, pat: string | null): Promise<GitOps> {
+  const ops = new GitOps(syncDir, config.repo, config.branch, pat);
   await ops.initRepo();
   return ops;
 }

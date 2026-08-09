@@ -34,3 +34,8 @@ export function readCredentials(filePath: string): string | null {
     return null;
   }
 }
+
+export function extractPat(credentialsLine: string): string | null {
+  const m = credentialsLine.match(/x-access-token:([^@]+)@/);
+  return m ? m[1] : null;
+}
