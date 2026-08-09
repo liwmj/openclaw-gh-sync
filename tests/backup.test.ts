@@ -39,8 +39,8 @@ describe("BackupEngine", () => {
     });
     expect(result).not.toBeNull();
     expect(result!.archivePath).toContain("backups");
-    await ops.commitChanged("backup");
-    await ops.push();
+    expect((await ops.statusRaw()).isClean()).toBe(true);
+    expect(await ops.aheadBehind()).toEqual({ ahead: 0, behind: 0 });
     const entries = readdirSync(backups);
     expect(entries.length).toBeGreaterThan(0);
     cleanup(bareDir, work);
