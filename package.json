@@ -1,5 +1,5 @@
 {
-  "name": "openclaw-gh-sync",
+  "name": "@liwmj/openclaw-gh-sync",
   "version": "0.1.0",
   "description": "Real-time GitHub sync and official-backup archive upload for OpenClaw",
   "type": "module",
@@ -28,6 +28,7 @@
   },
   "openclaw": {
     "extensions": ["./dist/index.js"],
-    "compat": { "pluginApi": ">=2026.3.24", "minGatewayVersion": "2026.3.24" }
+    "compat": { "pluginApi": ">=2026.3.24", "minGatewayVersion": "2026.3.24" },
+    "build": { "openclawVersion": "2026.7.1" }
   }
 }
