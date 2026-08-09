@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
+import { cpSync, existsSync, lstatSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
@@ -72,12 +72,12 @@ function latestLocal(dir: string): string | null {
   return snaps.length ? join(dir, snaps[0]) : null;
 }
 
-function walkForPreview(dir: string): string[] {
+export function walkForPreview(dir: string): string[] {
   const out: string[] = [];
   const walk = (d: string): void => {
     for (const name of readdirSync(d)) {
       const p = join(d, name);
-      const st = statSync(p);
+      const st = lstatSync(p);
       if (st.isDirectory()) walk(p);
       else out.push(p);
     }
@@ -88,7 +88,7 @@ function walkForPreview(dir: string): string[] {
 
 function removeStale(target: string): void {
   if (!existsSync(target)) return;
-  if (statSync(target).isDirectory()) {
+  if (lstatSync(target).isDirectory()) {
     for (const name of readdirSync(target)) {
       if (name === ".git") continue;
       rmSync(join(target, name), { recursive: true, force: true });

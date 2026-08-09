@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { listSnapshots, RestoreEngine } from "../src/restore.js";
+import { listSnapshots, RestoreEngine, walkForPreview } from "../src/restore.js";
 import { GitOps } from "../src/gitops.js";
 import { cleanup, makeBareRepo, makeWorkDir } from "./helpers/git-env.js";
 
@@ -13,6 +13,23 @@ describe("restore", () => {
     writeFileSync(join(dir, "a.tar.gz"), "");
     writeFileSync(join(dir, "b.txt"), "");
     expect(listSnapshots(dir)).toEqual(["a.tar.gz"]);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("does not follow symlinks during preview walk", () => {
+    const dir = mkdtempSync(join(tmpdir(), "rs-"));
+    const outside = join(dir, "outside");
+    const inside = join(dir, "inside");
+    mkdirSync(outside, { recursive: true });
+    mkdirSync(inside, { recursive: true });
+    writeFileSync(join(outside, "leak.txt"), "outside");
+    writeFileSync(join(inside, "safe.txt"), "inside");
+    symlinkSync(outside, join(inside, "link"));
+    const paths = walkForPreview(inside);
+    const names = paths.map((p) => p.replace(inside + "/", ""));
+    expect(names).toContain("link");
+    expect(names).toContain("safe.txt");
+    expect(names).not.toContain("leak.txt");
     rmSync(dir, { recursive: true, force: true });
   });
 
