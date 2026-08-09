@@ -84,22 +84,31 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
       try {
         const { cfg } = await ensureReady();
         if (cfg.syncStrategy === "replace-local" && gitops) {
+          console.log("[gh-sync] replace-local: fetching remote...");
           try {
             if (await gitops.fetchBranch(cfg.branch)) {
+              console.log("[gh-sync] replace-local: remote branch found, restoring...");
               const restored = await restoreEngine!.restore({ fromInstance: cfg.instanceName, yes: true }).catch(() => null);
               if (restored) {
+                console.log("[gh-sync] replace-local: backup restored");
                 cfg.syncStrategy = "merge";
                 cfgService.save(cfg);
               } else {
+                console.log("[gh-sync] replace-local: no backup, force-accepting remote");
                 await gitops.forceAcceptRemote(cfg.branch);
                 const entries = buildMirrorEntries(state, sync, cfg.include);
                 const excluded = compileExcludes(cfg.exclude);
                 copyMirrorToSources(entries, excluded);
+                console.log("[gh-sync] replace-local: remote state synced to local");
                 cfg.syncStrategy = "merge";
                 cfgService.save(cfg);
               }
+            } else {
+              console.log("[gh-sync] replace-local: no remote branch data yet");
             }
-          } catch { /* remote unreachable — retry next startup */ }
+          } catch (err) {
+            console.log(`[gh-sync] replace-local failed: ${String(err)} — retrying next startup`);
+          }
         }
         await engine!.start();
       } catch (e) {
