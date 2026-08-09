@@ -63,11 +63,16 @@ export async function runSetupWizard(opts: {
   }
   const repo = rawRepo;
 
+  const gitCryptRes = await prompts.confirm({
+    message: "Enable git-crypt encryption for sensitive files? (recommended if all devices have git-crypt)",
+  });
+  const wantsGitCrypt = !isCancel(gitCryptRes) && gitCryptRes === true;
+
   const plan = planForSetup({
     instanceNameRaw,
     repo,
     gitCryptAvailable: io.gitCryptAvailable(),
-    gitCryptEnabled: true,
+    gitCryptEnabled: wantsGitCrypt,
   });
 
   let syncStrategy: SyncConfig["syncStrategy"] = "merge";
