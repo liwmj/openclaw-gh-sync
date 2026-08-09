@@ -27,8 +27,9 @@ describe("e2e", () => {
 
     const prevBackupCli = process.env.GH_SYNC_BACKUP_CLI;
     process.env.GH_SYNC_BACKUP_CLI = FAKE_BACKUP_CLI;
+    const dirs: string[] = [bareDir, root];
+    const rt = createRuntime({ stateDir, env: { ...process.env } });
     try {
-      const rt = createRuntime({ stateDir, env: { ...process.env } });
       await rt.start();
 
       writeFileSync(join(stateDir, "workspace", "hello.txt"), "v1");
@@ -37,6 +38,7 @@ describe("e2e", () => {
       await expect.poll(async () => (await localOps.aheadBehind()).ahead, { timeout: 10000, interval: 250 }).toBe(0);
 
       const remote = mkdtempSync(join(tmpdir(), "e2e-remote-"));
+      dirs.push(remote);
       const remoteOps = new GitOps(remote, url, "instances/desktop", null);
       await remoteOps.initRepo();
       mkdirSync(join(remote, "openclaw", "workspace"), { recursive: true });
@@ -52,11 +54,10 @@ describe("e2e", () => {
 
       const restoreOut = await rt.restore({ dryRun: true });
       expect(restoreOut).toContain("preview");
-
-      await rt.stop();
-      cleanup(bareDir, root, remote);
     } finally {
+      await rt.stop();
       process.env.GH_SYNC_BACKUP_CLI = prevBackupCli;
+      cleanup(...dirs);
     }
   }, 30000);
 });
