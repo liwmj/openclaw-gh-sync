@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DEFAULT_CONFIG } from "../src/config.js";
@@ -51,6 +51,27 @@ describe("SyncEngine", () => {
     await engine.stop();
     cleanup(bareDir, workDir, remoteWork);
   }, 20000);
+
+  it("start() is idempotent: a second call does not leak a watcher that keeps pushing after stop", async () => {
+    const { bareDir, workDir, stateDir, syncDir } = setup();
+    const cfg = { ...DEFAULT_CONFIG, repo: bareDir, branch: "instances/desktop", instanceName: "desktop", pushDebounceMs: 300 };
+    const ops = new GitOps(syncDir, bareDir, cfg.branch, null);
+    const engine = new SyncEngine({ syncDir, stateDir, config: cfg, gitops: ops, log: () => {}, onError: () => {} });
+    await engine.start();
+    await engine.start();
+
+    await engine.stop();
+    writeFileSync(join(stateDir, "workspace", "a.txt"), "hi");
+    await new Promise((r) => setTimeout(r, 2500));
+
+    const remoteWork = mkdtempSync(join(tmpdir(), "rt-leak-"));
+    const remoteOps = new GitOps(remoteWork, bareDir, cfg.branch, null);
+    await remoteOps.initRepo();
+    expect(existsSync(join(remoteWork, "openclaw", "workspace", "a.txt"))).toBe(false);
+
+    await engine.stop();
+    cleanup(bareDir, workDir, remoteWork);
+  }, 30000);
 
   it("reports errors via onError instead of crashing when a watched file is deleted", async () => {
     const { bareDir, workDir, stateDir, syncDir } = setup();

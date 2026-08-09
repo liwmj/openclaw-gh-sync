@@ -34,10 +34,13 @@ export class SyncEngine {
   private pendingPush = false;
   private lastPushAt: string | null = null;
   private lastPullAt: string | null = null;
+  private started = false;
 
   constructor(private readonly deps: SyncDeps) {}
 
   async start(): Promise<void> {
+    if (this.started) return;
+    this.started = true;
     const { syncDir, stateDir, config, gitops, log } = this.deps;
     log("starting sync engine");
     await gitops.initRepo();
@@ -57,6 +60,7 @@ export class SyncEngine {
   }
 
   async stop(): Promise<void> {
+    this.started = false;
     await this.watcher?.stop();
     this.poller?.stop();
     this.watcher = null;

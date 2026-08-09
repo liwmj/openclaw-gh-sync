@@ -32,6 +32,7 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
   async function ensureReady(): Promise<{ cfg: NonNullable<ReturnType<ConfigService["load"]>> }> {
     const cfg = cfgService.load();
     if (!cfg || !cfgService.validate(cfg).ok) throw new Error("not configured: run `openclaw gh-sync setup`");
+    if (engine && gitops && backupEngine && restoreEngine) return { cfg };
     const cred = readCredentials(credentialsPath(sync)) ?? null;
     gitops = await createGitOps(cfg, sync, cred);
     engine = new SyncEngine({ stateDir: state, syncDir: sync, config: cfg, gitops, log: (m) => console.log(m), onError: (e) => { lastError = String(e); } });
@@ -61,8 +62,9 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
     async backupNow() {
       await ensureReady();
       const res = await backupEngine!.backupNow();
+      if (!res) return "backup failed";
       lastBackupAt = new Date().toISOString();
-      return res ? `backup uploaded: ${res.archivePath}` : "backup failed";
+      return `backup uploaded: ${res.archivePath}`;
     },
     async restore(o) {
       await ensureReady();
@@ -79,6 +81,10 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
     },
     async stop() {
       await engine?.stop();
+      engine = null;
+      backupEngine = null;
+      restoreEngine = null;
+      gitops = null;
     },
   };
 }
