@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { definePluginEntry, type OpenClawPluginDefinition } from "openclaw/plugin-sdk/plugin-entry";
-import { createRuntime, registerCommands } from "./cli.js";
+import { createRuntime, registerCommands, type CommanderProgram } from "./cli.js";
 
 export interface MinimalApi {
   id: string;
@@ -19,7 +19,7 @@ export function createPlugin(api: MinimalApi): void {
 
   api.registerCli(
     async ({ program }) => {
-      registerCommands(program as never);
+      registerCommands(program as unknown as CommanderProgram, rt);
     },
     {
       descriptors: [{ name: "gh-sync", description: "OpenClaw GitHub sync and backup", hasSubcommands: true }],

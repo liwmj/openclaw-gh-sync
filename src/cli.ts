@@ -5,17 +5,23 @@ import { buildStatus } from "./status.js";
 import { createGitOps, SyncEngine } from "./realtime.js";
 import { BackupEngine } from "./backup.js";
 import { RestoreEngine } from "./restore.js";
-import { readCredentials } from "./credentials.js";
+import { readCredentials, writeCredentials } from "./credentials.js";
 import { gitCryptAvailable } from "./gitcrypt.js";
+import { runSetupWizard } from "./setup.js";
+import { findConflictFiles } from "./conflicts.js";
 import type { SyncStatus } from "./types.js";
 
 export interface Runtime {
   status(): Promise<SyncStatus>;
   syncNow(): Promise<string>;
+  pushNow(): Promise<string>;
+  pullNow(): Promise<string>;
   backupNow(): Promise<string>;
   restore(opts: { snapshot?: string; fromInstance?: string; dryRun?: boolean; yes?: boolean }): Promise<string>;
   start(): Promise<void>;
   stop(): Promise<void>;
+  conflicts(): Promise<string>;
+  setup(): Promise<string>;
 }
 
 export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }): Runtime {
@@ -86,9 +92,86 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
       restoreEngine = null;
       gitops = null;
     },
+    async pushNow() {
+      await ensureReady();
+      await engine!.pushNow();
+      return "push complete";
+    },
+    async pullNow() {
+      await ensureReady();
+      await engine!.pullNow();
+      return "pull complete";
+    },
+    async conflicts() {
+      await ensureReady();
+      const files = findConflictFiles(sync);
+      return files.length ? files.join("\n") : "no conflicts";
+    },
+    async setup() {
+      const { text, select, confirm } = await import("@clack/prompts");
+      const result = await runSetupWizard({
+        prompts: { text, confirm, select },
+        io: {
+          stateDir: state,
+          configService: new ConfigService(configPath(sync)),
+          gitCryptAvailable,
+          writeCredentials,
+        },
+      });
+      return `setup complete: instance ${result.instanceName} on branch ${result.branch}`;
+    },
   };
 }
 
-export function registerCommands(ctx: { program: Record<string, (cmd: string, desc?: string) => unknown> }): void {
-  void ctx;
+export interface CommanderProgram {
+  command(nameAndArgs: string): CommanderCommand;
+}
+
+export interface CommanderCommand {
+  description(text: string): CommanderCommand;
+  option(flags: string, desc: string): CommanderCommand;
+  action(fn: (...args: unknown[]) => void | Promise<void>): void;
+}
+
+export function registerCommands(program: CommanderProgram, rt: Runtime): void {
+  program.command("status").description("Show config status, sync timestamps, ahead/behind, conflicts").action(async () => {
+    const s = await rt.status();
+    console.log(JSON.stringify(s, null, 2));
+  });
+
+  program.command("push").description("Force a push cycle immediately").action(async () => {
+    console.log(await rt.pushNow());
+  });
+
+  program.command("pull").description("Force a pull cycle immediately").action(async () => {
+    console.log(await rt.pullNow());
+  });
+
+  program.command("sync").description("Force a full sync cycle (pull + push)").action(async () => {
+    console.log(await rt.syncNow());
+  });
+
+  program.command("backup").description("Create and upload a backup archive now").action(async () => {
+    console.log(await rt.backupNow());
+  });
+
+  program.command("restore [snapshot]")
+    .description("Restore from a backup snapshot")
+    .option("--dry-run", "Preview what the restore would change")
+    .option("--yes", "Apply the restore without confirmation")
+    .action((...args: unknown[]) => {
+      const snapshot = typeof args[0] === "string" ? args[0] : undefined;
+      const opts = (args[args.length - 1] as { dryRun?: boolean; yes?: boolean } | undefined) ?? {};
+      void (async () => {
+        console.log(await rt.restore({ snapshot, dryRun: opts.dryRun, yes: opts.yes }));
+      })();
+    });
+
+  program.command("conflicts").description("List active merge conflicts").action(async () => {
+    console.log(await rt.conflicts());
+  });
+
+  program.command("setup").description("Interactive first-time configuration").action(async () => {
+    console.log(await rt.setup());
+  });
 }
