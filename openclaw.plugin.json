@@ -1,0 +1,16 @@
+{
+  "id": "openclaw-gh-sync",
+  "name": "OpenClaw GitHub Sync",
+  "description": "Real-time GitHub sync plus scheduled official-backup archive upload for OpenClaw",
+  "activation": { "onStartup": true },
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "repo": { "type": "string", "description": "GitHub repo URL (https)" },
+      "instanceName": { "type": "string", "description": "Instance name, [a-z0-9-] max 40" },
+      "pollIntervalSec": { "type": "number", "minimum": 5 },
+      "backupIntervalH": { "type": "number", "minimum": 1 }
+    },
+    "additionalProperties": false
+  }
+}
