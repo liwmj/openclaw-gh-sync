@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { listSnapshots, RestoreEngine } from "../src/restore.js";
@@ -47,5 +48,42 @@ describe("restore", () => {
     });
     await expect(engine.restore({ fromInstance: "dev", yes: true })).rejects.toThrow("no snapshot available");
     rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("applies a snapshot without destroying the repo and persists via push", async () => {
+    const { bareDir, url } = makeBareRepo();
+    const stateDir = mkdtempSync(join(tmpdir(), "rs-state-"));
+    const syncDir = join(stateDir, "gh-sync");
+    mkdirSync(syncDir, { recursive: true });
+    const ops = new GitOps(syncDir, url, "main", null);
+    await ops.initRepo();
+    mkdirSync(join(syncDir, "backups"), { recursive: true });
+    const snapRoot = mkdtempSync(join(tmpdir(), "rs-snap-"));
+    mkdirSync(join(snapRoot, "gh-sync", "openclaw"), { recursive: true });
+    writeFileSync(join(snapRoot, "gh-sync", "openclaw", "restored.txt"), "restored");
+    const snapshot = join(syncDir, "backups", "snap.tar.gz");
+    const packed = spawnSync("tar", ["-czf", snapshot, "-C", snapRoot, "gh-sync"], { encoding: "utf8" });
+    expect(packed.status).toBe(0);
+    const binDir = mkdtempSync(join(tmpdir(), "rs-bin-"));
+    writeFileSync(join(binDir, "openclaw"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+    const prevPath = process.env.PATH;
+    try {
+      process.env.PATH = `${binDir}:${prevPath ?? ""}`;
+      const engine = new RestoreEngine({
+        syncDir,
+        stateDir,
+        gitops: ops,
+        log: () => {},
+      });
+      const result = await engine.restore({ snapshot: "snap.tar.gz", yes: true });
+      expect(result.applied).toBe(true);
+      expect(existsSync(join(stateDir, "gh-sync", "openclaw", "restored.txt"))).toBe(true);
+      expect(await ops.cleanWorkingTree()).toBe(true);
+      expect(await ops.fetch()).toBe(true);
+      expect(await ops.aheadBehind()).toEqual({ ahead: 0, behind: 0 });
+    } finally {
+      process.env.PATH = prevPath;
+      cleanup(bareDir, stateDir, snapRoot, binDir);
+    }
   });
 });

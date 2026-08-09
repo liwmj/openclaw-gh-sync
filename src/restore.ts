@@ -86,10 +86,21 @@ function walkForPreview(dir: string): string[] {
   return out;
 }
 
+function removeStale(target: string): void {
+  if (!existsSync(target)) return;
+  if (statSync(target).isDirectory()) {
+    for (const name of readdirSync(target)) {
+      if (name === ".git") continue;
+      rmSync(join(target, name), { recursive: true, force: true });
+    }
+  } else {
+    rmSync(target, { force: true });
+  }
+}
+
 function copyStagingToState(staging: string, stateDir: string): void {
   for (const name of readdirSync(staging)) {
-    if (name === ".git") continue;
-    rmSync(join(stateDir, name), { recursive: true, force: true });
+    removeStale(join(stateDir, name));
   }
   cpSync(staging, stateDir, { recursive: true });
 }
