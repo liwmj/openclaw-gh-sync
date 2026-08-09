@@ -51,4 +51,32 @@ describe("SyncEngine", () => {
     await engine.stop();
     cleanup(bareDir, workDir, remoteWork);
   }, 20000);
+
+  it("reports errors via onError instead of crashing when a watched file is deleted", async () => {
+    const { bareDir, workDir, stateDir, syncDir } = setup();
+    const cfg = { ...DEFAULT_CONFIG, repo: bareDir, branch: "instances/desktop", instanceName: "desktop" };
+    const ops = new GitOps(syncDir, bareDir, cfg.branch, null);
+    const errors: unknown[] = [];
+    const engine = new SyncEngine({
+      syncDir,
+      stateDir,
+      config: cfg,
+      gitops: ops,
+      log: () => {},
+      onError: (err) => {
+        errors.push(err);
+      },
+    });
+    await engine.start();
+
+    await new Promise((r) => setTimeout(r, 1500));
+    writeFileSync(join(stateDir, "workspace", "a.txt"), "hi");
+    await expect.poll(async () => (await ops.aheadBehind()).behind, { timeout: 10000, interval: 100 }).toBe(0);
+
+    rmSync(join(stateDir, "workspace", "a.txt"));
+    await expect.poll(() => errors.length, { timeout: 10000, interval: 100 }).toBeGreaterThan(0);
+
+    await engine.stop();
+    cleanup(bareDir, workDir);
+  }, 30000);
 });

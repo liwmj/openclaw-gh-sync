@@ -31,6 +31,7 @@ export class SyncEngine {
   private watcher: FileWatcher | null = null;
   private poller: Poller | null = null;
   private isSyncing = false;
+  private pendingPush = false;
   private lastPushAt: string | null = null;
   private lastPullAt: string | null = null;
 
@@ -46,7 +47,7 @@ export class SyncEngine {
     await this.syncNow();
 
     const watchPaths = entries.map((e) => e.source);
-    this.watcher = new FileWatcher(watchPaths, config.exclude, (paths) => {
+    this.watcher = new FileWatcher(watchPaths, [syncDir, ...config.exclude], (paths) => {
       void this.onLocalChange(paths);
     }, config.pushDebounceMs);
     this.watcher.start();
@@ -63,16 +64,23 @@ export class SyncEngine {
   }
 
   private async onLocalChange(paths: string[]): Promise<void> {
-    const { syncDir, stateDir, config, gitops } = this.deps;
-    const entries = buildMirrorEntries(stateDir, syncDir, config.include);
-    const excluded = compileExcludes(config.exclude);
-    const filtered = paths.filter((p) => !excluded(p.replace(stateDir + "/", "")));
-    copyToMirror(entries, filtered, excluded);
-    await this.pushNow();
+    try {
+      const { syncDir, stateDir, config, gitops } = this.deps;
+      const entries = buildMirrorEntries(stateDir, syncDir, config.include);
+      const excluded = compileExcludes(config.exclude);
+      const filtered = paths.filter((p) => !excluded(p.replace(stateDir + "/", "")));
+      copyToMirror(entries, filtered, excluded);
+      await this.pushNow();
+    } catch (err) {
+      this.deps.onError(err);
+    }
   }
 
   async pushNow(): Promise<void> {
-    if (this.isSyncing) return;
+    if (this.isSyncing) {
+      this.pendingPush = true;
+      return;
+    }
     this.isSyncing = true;
     try {
       const committed = await this.deps.gitops.commitChanged(`Auto-sync: ${new Date().toISOString()}`);
@@ -83,7 +91,15 @@ export class SyncEngine {
     } catch (err) {
       this.deps.onError(err);
     } finally {
-      this.isSyncing = false;
+      this.releaseSync();
+    }
+  }
+
+  private releaseSync(): void {
+    this.isSyncing = false;
+    if (this.pendingPush) {
+      this.pendingPush = false;
+      void this.pushNow();
     }
   }
 
@@ -104,7 +120,7 @@ export class SyncEngine {
     } catch (err) {
       this.deps.onError(err);
     } finally {
-      this.isSyncing = false;
+      this.releaseSync();
     }
   }
 
