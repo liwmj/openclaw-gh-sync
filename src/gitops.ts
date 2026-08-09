@@ -19,6 +19,7 @@ export class GitOps {
     const isRepo = await this.git.checkIsRepo();
     if (!isRepo) {
       await this.git.init();
+      this.writeGitignore();
     }
     const authedUrl = this.pat ? this.repoUrl.replace("https://", `https://x-access-token:${encodeURIComponent(this.pat)}@`) : this.repoUrl;
     const remotes = await this.git.getRemotes(true);
@@ -98,6 +99,19 @@ export class GitOps {
 
   async cleanWorkingTree(): Promise<boolean> {
     return (await this.git.status()).isClean();
+  }
+
+  private writeGitignore(): void {
+    const ignorePath = join(this.syncDir, ".gitignore");
+    if (existsSync(ignorePath)) return;
+    fsWriteFileSync(ignorePath, [
+      ".git-credentials",
+      "*.sqlite",
+      "*.sqlite-*",
+      "*.jsonl",
+      "*.jsonl.*",
+      "",
+    ].join("\n"));
   }
 
   async statusRaw(): Promise<StatusResult> {

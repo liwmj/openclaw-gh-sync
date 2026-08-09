@@ -21,7 +21,7 @@ export const DEFAULT_CONFIG: SyncConfig = {
   repo: "",
   branch: "",
   instanceName: "",
-  include: ["."],
+  include: ["workspace"],
   exclude: [...DEFAULT_EXCLUDE],
   pushDebounceMs: 2000,
   pollIntervalSec: 60,
