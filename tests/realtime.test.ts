@@ -126,4 +126,22 @@ describe("SyncEngine", () => {
     await engine.stop();
     cleanup(bareDir, workDir);
   }, 30000);
+
+  it("concurrent start() and stop() does not orphan a watcher", async () => {
+    const { bareDir, workDir, stateDir, syncDir } = setup();
+    const cfg = { ...DEFAULT_CONFIG, repo: bareDir, branch: "instances/desktop", instanceName: "desktop" };
+    const ops = new GitOps(syncDir, bareDir, cfg.branch, null);
+    const engine = new SyncEngine({ syncDir, stateDir, config: cfg, gitops: ops, log: () => {}, onError: () => {} });
+
+    await Promise.all([engine.start(), engine.stop()]);
+
+    await engine.start();
+    await new Promise((r) => setTimeout(r, 1500));
+    writeFileSync(join(stateDir, "workspace", "z.txt"), "check");
+    await engine.pushNow();
+    await expect.poll(async () => (await ops.aheadBehind()).ahead, { timeout: 15000, interval: 200 }).toBe(0);
+
+    await engine.stop();
+    cleanup(bareDir, workDir);
+  }, 30000);
 });

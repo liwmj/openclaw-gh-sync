@@ -1,6 +1,5 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { backupsDir } from "./paths.js";
 import { listSnapshots } from "./restore.js";
 import { findConflictFiles } from "./conflicts.js";
 import type { SyncConfig, SyncStatus } from "./types.js";

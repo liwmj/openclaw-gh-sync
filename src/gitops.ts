@@ -78,10 +78,11 @@ export class GitOps {
   async fetchBranch(branch: string): Promise<boolean> {
     try {
       await this.git.fetch("origin", branch);
-      return await this.remoteRefExists(branch);
     } catch {
-      return false;
+      if (!(await this.remoteRefExists(branch))) return false;
+      throw new Error(`failed to fetch branch ${branch}: network or auth error`);
     }
+    return await this.remoteRefExists(branch);
   }
 
   async commitChanged(message: string): Promise<boolean> {

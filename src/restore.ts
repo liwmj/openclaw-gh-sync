@@ -58,9 +58,13 @@ export class RestoreEngine {
       copyStagingToState(staging, stateDir);
       this.deps.log(`restored ${archive}`);
       if (await gitops.commitChanged(`Restore: ${archive.split(/[\\/]/).pop() ?? archive}`)) {
-        await gitops.pushCurrent();
+        try {
+          await gitops.pushCurrent();
+        } catch (err) {
+          this.deps.log(`restore applied but push failed: ${String(err)} (watcher will retry)`);
+        }
       }
-      return { snapshot: archive, verified, staged: staging, changedPaths, applied: true };
+      return { snapshot: archive, verified, staged: "", changedPaths, applied: true };
     } finally {
       rmSync(staging, { recursive: true, force: true });
     }

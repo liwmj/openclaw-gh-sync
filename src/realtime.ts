@@ -35,44 +35,63 @@ export class SyncEngine {
   private lastPushAt: string | null = null;
   private lastPullAt: string | null = null;
   private started = false;
+  private lock = Promise.resolve();
 
   constructor(private readonly deps: SyncDeps) {}
 
+  private async acquireLock(): Promise<() => void> {
+    let release: () => void;
+    const prev = this.lock;
+    this.lock = new Promise<void>((resolve) => { release = resolve; });
+    await prev;
+    return release!;
+  }
+
   async start(): Promise<void> {
-    if (this.started) return;
-    this.started = true;
+    const unlock = await this.acquireLock();
     try {
-      const { syncDir, stateDir, config, gitops, log } = this.deps;
-      log("starting sync engine");
-      await gitops.initRepo();
-      const entries = buildMirrorEntries(stateDir, syncDir, config.include);
-      const excluded = compileExcludes(config.exclude);
-      copyAllToMirror(entries, excluded);
-      await this.syncNow();
+      if (this.started) return;
+      this.started = true;
+      try {
+        const { syncDir, stateDir, config, gitops, log } = this.deps;
+        log("starting sync engine");
+        await gitops.initRepo();
+        const entries = buildMirrorEntries(stateDir, syncDir, config.include);
+        const excluded = compileExcludes(config.exclude);
+        copyAllToMirror(entries, excluded);
+        await this.syncNow();
 
-      const watchPaths = entries.map((e) => e.source);
-      this.watcher = new FileWatcher(watchPaths, [syncDir, ...config.exclude], (paths) => {
-        void this.onLocalChange(paths);
-      }, config.pushDebounceMs);
-      this.watcher.start();
+        const watchPaths = entries.map((e) => e.source);
+        this.watcher = new FileWatcher(watchPaths, [syncDir, ...config.exclude], (paths) => {
+          void this.onLocalChange(paths);
+        }, config.pushDebounceMs);
+        this.watcher.start();
 
-      this.poller = new Poller(config.pollIntervalSec * 1000, () => this.pullNow());
-      this.poller.start();
-    } catch (err) {
-      this.started = false;
-      await this.watcher?.stop();
-      this.watcher = null;
-      this.poller = null;
-      throw err;
+        this.poller = new Poller(config.pollIntervalSec * 1000, () => this.pullNow());
+        this.poller.start();
+      } catch (err) {
+        this.started = false;
+        await this.watcher?.stop();
+        this.watcher = null;
+        this.poller = null;
+        throw err;
+      }
+    } finally {
+      unlock();
     }
   }
 
   async stop(): Promise<void> {
-    this.started = false;
-    await this.watcher?.stop();
-    this.poller?.stop();
-    this.watcher = null;
-    this.poller = null;
+    const unlock = await this.acquireLock();
+    try {
+      this.started = false;
+      await this.watcher?.stop();
+      this.poller?.stop();
+      this.watcher = null;
+      this.poller = null;
+    } finally {
+      unlock();
+    }
   }
 
   private async onLocalChange(paths: string[]): Promise<void> {
