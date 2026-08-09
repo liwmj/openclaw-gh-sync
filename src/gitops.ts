@@ -71,6 +71,15 @@ export class GitOps {
     }
   }
 
+  async fetchBranch(branch: string): Promise<boolean> {
+    try {
+      await this.git.fetch("origin", branch);
+      return await this.remoteRefExists(branch);
+    } catch {
+      return false;
+    }
+  }
+
   async commitChanged(message: string): Promise<boolean> {
     await this.git.add(".");
     const status = await this.git.status();
@@ -81,6 +90,10 @@ export class GitOps {
 
   async push(): Promise<void> {
     await this.git.push("origin", this.branch);
+  }
+
+  async pushCurrent(): Promise<void> {
+    await this.git.push("origin", "HEAD");
   }
 
   async cleanWorkingTree(): Promise<boolean> {

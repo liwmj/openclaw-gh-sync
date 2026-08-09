@@ -14,4 +14,38 @@ describe("restore", () => {
     expect(listSnapshots(dir)).toEqual(["a.tar.gz"]);
     rmSync(dir, { recursive: true, force: true });
   });
+
+  it("throws when the remote instance branch does not exist", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "rs-"));
+    const engine = new RestoreEngine({
+      syncDir: dir,
+      stateDir: dir,
+      gitops: {
+        ensureBranch: async () => {},
+        fetchBranch: async () => false,
+        commitChanged: async () => true,
+        pushCurrent: async () => {},
+      },
+      log: () => {},
+    });
+    await expect(engine.restore({ fromInstance: "missing", yes: true })).rejects.toThrow("no remote instance: missing");
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("throws when the instance branch has no snapshots", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "rs-"));
+    const engine = new RestoreEngine({
+      syncDir: dir,
+      stateDir: dir,
+      gitops: {
+        ensureBranch: async () => {},
+        fetchBranch: async () => true,
+        commitChanged: async () => true,
+        pushCurrent: async () => {},
+      },
+      log: () => {},
+    });
+    await expect(engine.restore({ fromInstance: "dev", yes: true })).rejects.toThrow("no snapshot available");
+    rmSync(dir, { recursive: true, force: true });
+  });
 });

@@ -23,3 +23,25 @@ describe("GitOps lifecycle", () => {
     cleanup(bareDir, work);
   });
 });
+
+describe("GitOps instance branch operations", () => {
+  it("pushes the current branch and fetches a named remote branch", async () => {
+    const { bareDir, url } = makeBareRepo();
+    const a = makeWorkDir();
+    const opsA = new GitOps(a, url, "main", null);
+    await opsA.initRepo();
+    writeFileSync(join(a, "x.txt"), "hi");
+    await opsA.commitChanged("initial");
+    await opsA.push();
+    await opsA.ensureBranch("instances/dev");
+    writeFileSync(join(a, "dev.txt"), "dev");
+    await opsA.commitChanged("dev change");
+    await opsA.pushCurrent();
+    const b = makeWorkDir();
+    const opsB = new GitOps(b, url, "main", null);
+    await opsB.initRepo();
+    expect(await opsB.fetchBranch("instances/dev")).toBe(true);
+    expect(await opsB.fetchBranch("instances/missing")).toBe(false);
+    cleanup(bareDir, a, b);
+  });
+});

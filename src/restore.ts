@@ -1,12 +1,18 @@
-import { cpSync, existsSync, mkdirSync, readdirSync, statSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
 import type { RestoreResult } from "./types.js";
 
 export interface RestoreDeps {
   syncDir: string;
   stateDir: string;
-  gitops: { fetch(): Promise<boolean>; ensureBranch(name: string): Promise<void> };
+  gitops: {
+    ensureBranch(name: string): Promise<void>;
+    fetchBranch(branch: string): Promise<boolean>;
+    commitChanged(message: string): Promise<boolean>;
+    pushCurrent(): Promise<void>;
+  };
   log: (m: string) => void;
 }
 
@@ -27,35 +33,43 @@ export class RestoreEngine {
 
   async restore(opts: { snapshot?: string; fromInstance?: string; dryRun?: boolean; yes?: boolean }): Promise<RestoreResult> {
     const { stateDir, syncDir, gitops } = this.deps;
-    let archive = opts.snapshot ? join(syncDir, "backups", opts.snapshot) : latestLocal(join(syncDir, "backups"));
+    if (opts.snapshot && opts.fromInstance) {
+      throw new Error("snapshot and fromInstance are mutually exclusive");
+    }
+    let archive: string | null = opts.snapshot ? join(syncDir, "backups", opts.snapshot) : latestLocal(join(syncDir, "backups"));
     if (opts.fromInstance) {
-      await gitops.fetch();
-      await gitops.ensureBranch(`instances/${opts.fromInstance}`);
-      archive = join(syncDir, "backups", latestRemote(join(syncDir, "backups")));
+      const branch = `instances/${opts.fromInstance}`;
+      if (!(await gitops.fetchBranch(branch))) {
+        throw new Error(`no remote instance: ${opts.fromInstance}`);
+      }
+      await gitops.ensureBranch(branch);
+      archive = latestLocal(join(syncDir, "backups"));
     }
     if (!archive || !existsSync(archive)) throw new Error("no snapshot available");
     const verified = await verifyArchive(archive);
-    const staging = join(syncDir, ".restore");
-    mkdirSync(staging, { recursive: true });
-    const res = spawnSync("tar", ["-xzf", archive, "-C", staging], { stdio: "ignore" });
-    if (res.status !== 0) throw new Error("archive extraction failed");
-    const changedPaths = walkForPreview(staging);
-    if (opts.dryRun) return { snapshot: archive, verified, staged: staging, changedPaths, applied: false };
-    if (!opts.yes) throw new Error("dry-run required: pass --yes to apply, or use --dry-run to preview");
-    copyStagingToState(staging, stateDir);
-    this.deps.log(`restored ${archive}`);
-    return { snapshot: archive, verified, staged: staging, changedPaths, applied: true };
+    const staging = mkdtempSync(join(tmpdir(), "openclaw-restore-"));
+    try {
+      const res = spawnSync("tar", ["-xzf", archive, "-C", staging], { stdio: "ignore" });
+      if (res.status !== 0) throw new Error("archive extraction failed");
+      const changedPaths = walkForPreview(staging);
+      if (opts.dryRun) return { snapshot: archive, verified, staged: staging, changedPaths, applied: false };
+      if (!opts.yes) throw new Error("pass --yes to apply, or use --dry-run to preview");
+      if (!verified) throw new Error(`archive failed verification: ${archive}`);
+      copyStagingToState(staging, stateDir);
+      this.deps.log(`restored ${archive}`);
+      if (await gitops.commitChanged(`Restore: ${archive.split(/[\\/]/).pop() ?? archive}`)) {
+        await gitops.pushCurrent();
+      }
+      return { snapshot: archive, verified, staged: staging, changedPaths, applied: true };
+    } finally {
+      rmSync(staging, { recursive: true, force: true });
+    }
   }
 }
 
 function latestLocal(dir: string): string | null {
   const snaps = listSnapshots(dir).sort().reverse();
   return snaps.length ? join(dir, snaps[0]) : null;
-}
-
-function latestRemote(dir: string): string {
-  const snaps = listSnapshots(dir).sort().reverse();
-  return snaps[0] ?? "";
 }
 
 function walkForPreview(dir: string): string[] {
@@ -73,5 +87,9 @@ function walkForPreview(dir: string): string[] {
 }
 
 function copyStagingToState(staging: string, stateDir: string): void {
+  for (const name of readdirSync(staging)) {
+    if (name === ".git") continue;
+    rmSync(join(stateDir, name), { recursive: true, force: true });
+  }
   cpSync(staging, stateDir, { recursive: true });
 }
