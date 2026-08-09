@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, statSync, unlinkSync } from "node:fs";
+import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import type { BackupResult } from "./types.js";
 
@@ -14,6 +15,7 @@ export interface BackupDeps {
   stateDir: string;
   syncDir: string;
   backupsDir: string;
+  retain: number;
   gitops: { commitChanged(message: string): Promise<boolean>; push(): Promise<void> };
   log: (m: string) => void;
 }
@@ -45,12 +47,22 @@ export class BackupEngine {
     const uploadedTo: BackupResult["uploadedTo"] = "git";
     await gitops.commitChanged(`Backup: ${archive.split(/[\\/]/).pop() ?? archive}`);
     await gitops.push();
-    await this.enforceRetention(this.deps.syncDir);
+    await this.enforceRetention();
     log(`backup uploaded: ${archive}`);
     return { archivePath: archive, sizeBytes, uploadedTo };
   }
 
-  async enforceRetention(_syncDir: string): Promise<void> {
-    // retention handled by Task 14 status/cleanup task; placeholder removed there
+  async enforceRetention(): Promise<void> {
+    const { backupsDir, gitops, retain } = this.deps;
+    if (retain <= 0) return;
+    const files = readdirSync(backupsDir)
+      .filter((f) => f.endsWith(".tar.gz"))
+      .map((f) => join(backupsDir, f));
+    if (files.length <= retain) return;
+    const sorted = files.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
+    const toDelete = sorted.slice(retain);
+    for (const f of toDelete) unlinkSync(f);
+    const changed = await gitops.commitChanged(`Backup retention: removed ${toDelete.length} old archive(s)`);
+    if (changed) await gitops.push();
   }
 }

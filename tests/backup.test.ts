@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mkdtempSync, mkdirSync, rmSync, readdirSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, readdirSync, writeFileSync, utimesSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
@@ -31,7 +31,7 @@ describe("BackupEngine", () => {
     mkdirSync(syncDir, { recursive: true });
     const ops = new GitOps(syncDir, url, "instances/a", null);
     await ops.initRepo();
-    const engine = new BackupEngine({ stateDir, syncDir, backupsDir: backups, gitops: ops, log: () => {} });
+    const engine = new BackupEngine({ stateDir, syncDir, backupsDir: backups, retain: 7, gitops: ops, log: () => {} });
     const result = await engine.backupNow((_cmd, args) => {
       const outputDir = args[args.indexOf("--output") + 1];
       const res = execFileSync(FAKE, [outputDir, "backup.tar.gz"], { encoding: "utf8" });
@@ -43,6 +43,35 @@ describe("BackupEngine", () => {
     expect(await ops.aheadBehind()).toEqual({ ahead: 0, behind: 0 });
     const entries = readdirSync(backups);
     expect(entries.length).toBeGreaterThan(0);
+    cleanup(bareDir, work);
+  });
+  it("enforceRetention removes oldest archives beyond retain count", async () => {
+    const { bareDir, url } = makeBareRepo();
+    const work = makeWorkDir();
+    const syncDir = join(work, "gh-sync");
+    const backups = join(syncDir, "backups");
+    const stateDir = join(work, "state");
+    mkdirSync(backups, { recursive: true });
+
+    const ops = new GitOps(syncDir, url, "instances/a", null);
+    await ops.initRepo();
+    const engine = new BackupEngine({ stateDir, syncDir, backupsDir: backups, retain: 2, gitops: ops, log: () => {} });
+
+    const files = ["a.tar.gz", "b.tar.gz", "c.tar.gz", "d.tar.gz", "e.tar.gz"];
+    const now = Date.now();
+    files.forEach((f, i) => {
+      const p = join(backups, f);
+      writeFileSync(p, f);
+      const age = i * 60000;
+      utimesSync(p, now - age, now - age);
+    });
+    expect(readdirSync(backups).length).toBe(5);
+
+    await engine.enforceRetention();
+
+    const remaining = readdirSync(backups).sort();
+    expect(remaining).toEqual(["a.tar.gz", "b.tar.gz"]);
+    expect(await ops.aheadBehind()).toEqual({ ahead: 0, behind: 0 });
     cleanup(bareDir, work);
   });
 });
