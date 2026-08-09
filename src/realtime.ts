@@ -6,6 +6,13 @@ import { GitOps } from "./gitops.js";
 import { FileWatcher } from "./watcher.js";
 import { Poller } from "./poller.js";
 
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`operation timed out after ${ms}ms`)), ms);
+    p.then((v) => { clearTimeout(timer); resolve(v); }, (e) => { clearTimeout(timer); reject(e); });
+  });
+}
+
 export interface SyncDeps {
   syncDir: string;
   stateDir: string;
@@ -114,9 +121,9 @@ export class SyncEngine {
     }
     this.isSyncing = true;
     try {
-      const committed = await this.deps.gitops.commitChanged(`Auto-sync: ${new Date().toISOString()}`);
+      const committed = await withTimeout(this.deps.gitops.commitChanged(`Auto-sync: ${new Date().toISOString()}`), 30_000);
       if (committed) {
-        await this.deps.gitops.push();
+        await withTimeout(this.deps.gitops.push(), 60_000);
         this.lastPushAt = new Date().toISOString();
       }
     } catch (err) {
@@ -139,7 +146,7 @@ export class SyncEngine {
     this.isSyncing = true;
     try {
       const { gitops, syncDir, stateDir, config } = this.deps;
-      const outcome = await gitops.pull();
+      const outcome = await withTimeout(gitops.pull(), 60_000);
       if (outcome.status === "ok" && outcome.changedFiles.length > 0) {
         const entries = buildMirrorEntries(stateDir, syncDir, config.include);
         const excluded = compileExcludes(config.exclude);
