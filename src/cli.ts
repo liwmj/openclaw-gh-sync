@@ -128,8 +128,9 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
           writeCredentials,
           hasRemoteInstance: async (_repo: string, branch: string): Promise<boolean> => {
             try {
+              const url = /^https?:\/\//.test(_repo) ? _repo : `https://github.com/${_repo.replace(/^\/+/, "")}`;
               const { execFileSync } = await import("node:child_process");
-              const out = execFileSync("git", ["ls-remote", "--heads", _repo, `refs/heads/${branch}`], { encoding: "utf8", timeout: 5000 });
+              const out = execFileSync("git", ["ls-remote", "--heads", url, `refs/heads/${branch}`], { encoding: "utf8", timeout: 5000 });
               return out.trim().length > 0;
             } catch {
               return false;

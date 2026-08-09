@@ -49,15 +49,19 @@ export async function runSetupWizard(opts: {
     throw new Error(`setup aborted: ${what} cancelled`);
   };
 
-  const repoRes = await prompts.text({ message: "GitHub repository URL (https://github.com/owner/repo)" });
+  const repoRes = await prompts.text({ message: "GitHub repository (username/repo or https://github.com/username/repo)" });
   if (isCancel(repoRes)) abort("repo");
   const patRes = await prompts.text({ message: "GitHub Personal Access Token (Fine-grained: Contents=Read+Write, or Classic: repo scope)" });
   if (isCancel(patRes)) abort("PAT");
   const instanceNameRawRes = await prompts.text({ message: "Instance name" });
   if (isCancel(instanceNameRawRes)) abort("instance name");
-  const repo = String(repoRes);
   const pat = String(patRes);
   const instanceNameRaw = String(instanceNameRawRes);
+  let rawRepo = String(repoRes);
+  if (!/^https?:\/\//.test(rawRepo)) {
+    rawRepo = `https://github.com/${rawRepo.replace(/^\/+/, "")}`;
+  }
+  const repo = rawRepo;
 
   const plan = planForSetup({
     instanceNameRaw,
