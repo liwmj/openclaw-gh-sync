@@ -4,15 +4,19 @@ OpenClaw 实时 GitHub 同步插件——将本地 OpenClaw 工作区双向同�
 
 ## 它能做什么
 
-- **多设备同步**：家里的电脑和公司的笔记本共享同一套 OpenClaw 配置、工作区文件、会话记录
+- **多实例同步**：不同电脑、不同智能体之间共享同一套 OpenClaw 配置、工作区文件、会话记录
 - **备份与恢复**：定时通过 `openclaw backup create --verify` 创建官方备份存档，上传到 GitHub 仓库。误删或重装系统后一键恢复
-- **跨设备迁移**：新电脑直接从旧机器的 GitHub 分支拉取完整状态，无需手动拷贝
+- **跨实例迁移**：新环境中直接从已有实例的 GitHub 分支拉取完整状态，无需手动拷贝
 - **版本历史**：所有变更通过 Git 提交，随时回溯任意时间点的状态
 
 ## 快速安装
 
 ```bash
+# 安装最新版
 openclaw plugins install clawhub:@liwmj/openclaw-gh-sync
+
+# 安装指定版本
+openclaw plugins install clawhub:@liwmj/openclaw-gh-sync@0.1.1
 ```
 
 > 要求 Node.js >= 22.22.3，OpenClaw >= 2026.3.24
@@ -29,9 +33,9 @@ openclaw gh-sync setup
 
 | 步骤 | 说明 |
 |---|---|
-| **GitHub 仓库** | 用于同步的仓库地址，格式 `https://github.com/用户名/仓库名`。可以是空仓库，插件会自动创建分支结构 |
+| **GitHub 仓库** | 输入 `用户名/仓库名` 即可（如 `liwmj/my-sync-repo`），插件自动补全为 `https://github.com/liwmj/my-sync-repo`。可以是空仓库 |
 | **Personal Access Token** | GitHub 个人访问令牌，需要 `repo`（仓库读写）权限。存储在工作目录下 `.git-credentials` 文件中（权限 0600，不会被提交到仓库） |
-| **实例名称** | 当前设备的标识，只能包含小写字母、数字和连字符（最长 40 个字符），如 `desktop`、`macbook-pro`。每台设备对应仓库中独立的分支 `instances/<实例名>` |
+| **实例名称** | 当前智能体或场景的标识，如 `coding-assistant`、`writing-tutor`。只能包含小写字母、数字和连字符（最长 40 个字符）。每个实例对应仓库中独立的分支 `instances/<实例名>` |
 | **git-crypt** | 可选加密方案。如果安装了 git-crypt，推荐启用，敏感文件在远程仓库中会以加密形式存储 |
 
 配置完成后，每次 OpenClaw 网关启动时会自动启动同步引擎。使用 `openclaw gh-sync status` 查看运行状态。
@@ -48,7 +52,7 @@ openclaw gh-sync setup
 
 ### 定时拉取（Pull）
 每 60 秒（可配置）检查远程变更：
-1. 从远程拉取当前设备分支的最新提交
+1. 从远程拉取当前实例分支的最新提交
 2. fast-forward 合并本地
 3. 将远程变更的文件复制回本地工作区
 
@@ -76,7 +80,7 @@ openclaw gh-sync setup
 
 ### 从备份恢复
 
-恢复本设备分支上最新的备份存档：
+恢复本实例分支上最新的备份存档：
 
 ```bash
 # 先预览
@@ -86,19 +90,19 @@ openclaw gh-sync restore --dry-run
 openclaw gh-sync restore --yes
 ```
 
-### 从其他设备迁移
+### 从其他实例迁移
 
-换新电脑时，从旧设备的分支恢复状态：
+换新电脑或切换智能体时，从旧实例的分支恢复状态：
 
 ```bash
-# 拉取旧设备（如笔记本电脑）的最新备份
-openclaw gh-sync restore --from-instance laptop --dry-run
+# 拉取旧智能体（如之前用的 coding-assistant）的最新备份
+openclaw gh-sync restore --from-instance coding-assistant --dry-run
 
 # 确认后执行
-openclaw gh-sync restore --from-instance laptop --yes
+openclaw gh-sync restore --from-instance coding-assistant --yes
 ```
 
-此操作会从远程拉取 `instances/laptop` 分支，提取最新的备份存档，校验完整性后解压写入本地工作区。
+此操作会从远程拉取 `instances/coding-assistant` 分支，提取最新的备份存档，校验完整性后解压写入本地工作区。
 
 ### 指定快照文件恢复
 
@@ -113,8 +117,8 @@ openclaw gh-sync restore backup-2026-08-10.tar.gz --yes
 ```jsonc
 {
   "repo": "https://github.com/用户名/仓库名",   // 同步目标仓库（必填，仅支持 HTTPS）
-  "branch": "instances/desktop",               // 当前设备分支，由实例名自动生成
-  "instanceName": "desktop",                   // 当前设备标识
+  "branch": "instances/coding-assistant",        // 当前实例分支，由实例名自动生成
+  "instanceName": "coding-assistant",            // 当前实例/智能体标识
   "include": ["."],                            // 要同步的目录，相对于 OpenClaw 数据目录
   "exclude": [                                 // 排除同步的 glob 模式
     "gh-sync/**",                              //   插件自身的缓存和数据不参与同步
@@ -141,19 +145,18 @@ openclaw gh-sync restore backup-2026-08-10.tar.gz --yes
 ```
 仓库根目录/
 ├── instances/
-│   └── desktop/                     # 以你的实例名称命名
-│       ├── config.json              # 本机同步配置
+│   └── coding-assistant/            # 以你的实例名称命名
+│       ├── config.json              # 本实例同步配置
 │       ├── instance.json            # 实例元数据（名称、主机名、创建时间）
 │       ├── .git-credentials         # PAT 凭证文件（不会被提交）
 │       ├── openclaw/                # 镜像工作区
 │       │   └── workspace/           # 你的 OpenClaw 工作区文件
 │       └── backups/                 # 备份存档（.tar.gz）
 └── instances/
-    └── laptop/                      # 另一台设备的实例分支
+    └── writing-tutor/               # 另一个智能体的实例分支
         └── ...
-```
 
-每台设备拥有独立分支，互不干扰。备份存档统一存放在各自分支的 `backups/` 目录中。
+每个实例拥有独立分支，互不干扰。备份存档统一存放在各自分支的 `backups/` 目录中。
 
 ## 安全说明
 
