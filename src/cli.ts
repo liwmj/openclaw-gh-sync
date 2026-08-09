@@ -84,7 +84,12 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
         if (cfg.syncStrategy === "replace-local" && gitops) {
           try {
             if (await gitops.fetchBranch(cfg.branch)) {
-              await restoreEngine!.restore({ fromInstance: cfg.instanceName, yes: true });
+              try {
+                await restoreEngine!.restore({ fromInstance: cfg.instanceName, yes: true });
+              } catch {
+                // no backup archive — force pull from remote instead
+                await gitops.forceAcceptRemote(cfg.branch);
+              }
             }
           } catch { /* remote unreachable or no data — proceed normally */ }
           cfg.syncStrategy = "merge";
