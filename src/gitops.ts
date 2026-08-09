@@ -136,11 +136,31 @@ export class GitOps {
         await this.git.merge(["--ff-only", `origin/${this.branch}`]);
         return { status: "ok", changedFiles };
       } catch {
-        return { status: "conflict" };
+        await this.saveLocalConflictFiles(changedFiles, Date.now().toString(), "local");
+        await this.forceAcceptRemote(this.branch);
+        return { status: "ok", changedFiles };
       }
     }
+    await this.saveLocalConflictFiles(changedFiles, Date.now().toString(), "local");
     const result = await this.mergeRemote("theirs");
-    return result === "merged" ? { status: "ok", changedFiles } : { status: "conflict" };
+    if (result === "conflict") {
+      await this.acceptRemoteForConflicts();
+      await this.git.commit("Resolve conflicts: accept remote");
+    }
+    return { status: "ok", changedFiles };
+  }
+
+  async forceAcceptRemote(branch: string): Promise<void> {
+    await this.git.merge(["--abort"]).catch(() => {});
+    await this.git.reset(["--hard", `origin/${branch}`]);
+  }
+
+  async acceptRemoteForConflicts(): Promise<void> {
+    const status = await this.git.status();
+    for (const file of status.conflicted) {
+      await this.git.raw(["checkout", "--theirs", file]);
+      await this.git.add(file);
+    }
   }
 
   async listChangedFiles(fromRef: string, toRef: string): Promise<string[]> {

@@ -56,6 +56,16 @@ export async function runSetupWizard(opts: {
   const pat = String(patRes);
   const instanceNameRaw = String(instanceNameRawRes);
 
+  const strategyRes = await prompts.select({
+    message: "How should sync handle existing remote data?",
+    options: [
+      { value: "merge", label: "Merge — combine local and remote data (recommended)" },
+      { value: "replace-local", label: "Replace local — overwrite local with remote (use when migrating)" },
+    ],
+  });
+  if (isCancel(strategyRes)) abort("strategy selection");
+  const syncStrategy = strategyRes as SyncConfig["syncStrategy"];
+
   const plan = planForSetup({
     instanceNameRaw,
     repo,
@@ -86,6 +96,7 @@ export async function runSetupWizard(opts: {
     branch: plan.branch,
     instanceName: plan.instanceName,
     gitCryptEnabled: action === "init",
+    syncStrategy,
   };
   const validation = io.configService.validate(cfg);
   if (!validation.ok) throw new Error(`setup aborted: invalid config: ${validation.errors.join("; ")}`);

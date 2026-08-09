@@ -9,6 +9,7 @@ export interface SyncConfig {
   backupIntervalH: number;
   backupRetain: number;
   gitCryptEnabled: boolean;
+  syncStrategy: "merge" | "replace-local";
 }
 
 export interface InstanceMeta {

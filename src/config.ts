@@ -26,8 +26,9 @@ export const DEFAULT_CONFIG: SyncConfig = {
   pushDebounceMs: 2000,
   pollIntervalSec: 60,
   backupIntervalH: 6,
-  backupRetain: 7,
+  backupRetain: 10,
   gitCryptEnabled: true,
+  syncStrategy: "merge",
 };
 
 const NAME_RE = /[^a-z0-9-]/g;

@@ -145,8 +145,6 @@ export class SyncEngine {
         const excluded = compileExcludes(config.exclude);
         copyMirrorToSources(entries, excluded);
         this.lastPullAt = new Date().toISOString();
-      } else if (outcome.status === "conflict") {
-        this.deps.onError(new Error("merge conflict detected; run `openclaw gh-sync conflicts`"));
       }
     } catch (err) {
       this.deps.onError(err);

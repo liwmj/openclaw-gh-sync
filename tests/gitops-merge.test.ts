@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { GitOps } from "../src/gitops.js";
 import { cleanup, makeBareRepo, makeWorkDir } from "./helpers/git-env.js";
@@ -27,7 +27,7 @@ describe("GitOps merge/pull", () => {
     cleanup(bareDir, a.syncDir, b.syncDir);
   });
 
-  it("reports conflict when local uncommitted change blocks fast-forward", async () => {
+  it("force-accepts remote and saves local sidecar when uncommitted change blocks fast-forward", async () => {
     const { bareDir, url } = makeBareRepo();
     const branch = "instances/a";
     const a = new GitOps(makeWorkDir(), url, branch, null);
@@ -45,8 +45,10 @@ describe("GitOps merge/pull", () => {
 
     writeFileSync(join(a.syncDir, "openclaw", "f.txt"), "local");
     const out = await a.pull();
-    expect(out.status).toBe("conflict");
-    expect(readFileSync(join(a.syncDir, "openclaw", "f.txt"), "utf8")).toBe("local");
+    expect(out.status).toBe("ok");
+    expect(readFileSync(join(a.syncDir, "openclaw", "f.txt"), "utf8")).toBe("remote");
+    const sidecars = readdirSync(join(a.syncDir, "openclaw")).filter((n) => n.includes(".local."));
+    expect(sidecars.length).toBe(1);
     cleanup(bareDir, a.syncDir, b.syncDir);
   });
 
