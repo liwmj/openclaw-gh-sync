@@ -134,7 +134,11 @@ export interface CommanderCommand {
   action(fn: (...args: unknown[]) => void | Promise<void>): void;
 }
 
+let commandsRegistered = false;
+
 export function registerCommands(program: CommanderProgram, rt: Runtime): void {
+  if (commandsRegistered) return;
+  commandsRegistered = true;
   program.command("status").description("Show config status, sync timestamps, ahead/behind, conflicts").action(async () => {
     const s = await rt.status();
     console.log(JSON.stringify(s, null, 2));
