@@ -79,7 +79,16 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
     },
     async start() {
       try {
-        await ensureReady();
+        const { cfg } = await ensureReady();
+        if (cfg.syncStrategy === "replace-local" && gitops) {
+          try {
+            if (await gitops.fetchBranch(cfg.branch)) {
+              await restoreEngine!.restore({ fromInstance: cfg.instanceName, yes: true });
+            }
+          } catch { /* remote unreachable or no data — proceed normally */ }
+          cfg.syncStrategy = "merge";
+          cfgService.save(cfg);
+        }
         await engine!.start();
       } catch (e) {
         lastError = String(e);
@@ -117,6 +126,15 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
           configService: new ConfigService(configPath(sync)),
           gitCryptAvailable,
           writeCredentials,
+          hasRemoteInstance: async (_repo: string, branch: string): Promise<boolean> => {
+            try {
+              const { execFileSync } = await import("node:child_process");
+              const out = execFileSync("git", ["ls-remote", "--heads", _repo, `refs/heads/${branch}`], { encoding: "utf8", timeout: 5000 });
+              return out.trim().length > 0;
+            } catch {
+              return false;
+            }
+          },
         },
       });
       return `setup complete: instance ${result.instanceName} on branch ${result.branch}`;

@@ -40,6 +40,7 @@ export async function runSetupWizard(opts: {
     configService: ConfigService;
     gitCryptAvailable: () => boolean;
     writeCredentials: (file: string, repo: string, pat: string) => void;
+    hasRemoteInstance: (repo: string, branch: string) => Promise<boolean>;
   };
 }): Promise<SyncConfig> {
   const { prompts, io } = opts;
@@ -58,22 +59,26 @@ export async function runSetupWizard(opts: {
   const pat = String(patRes);
   const instanceNameRaw = String(instanceNameRawRes);
 
-  const strategyRes = await prompts.select({
-    message: "How should sync handle existing remote data?",
-    options: [
-      { value: "merge", label: "Merge — combine local and remote data (recommended)" },
-      { value: "replace-local", label: "Replace local — overwrite local with remote (use when migrating)" },
-    ],
-  });
-  if (isCancel(strategyRes)) abort("strategy selection");
-  const syncStrategy = strategyRes as SyncConfig["syncStrategy"];
-
   const plan = planForSetup({
     instanceNameRaw,
     repo,
     gitCryptAvailable: io.gitCryptAvailable(),
     gitCryptEnabled: true,
   });
+
+  let syncStrategy: SyncConfig["syncStrategy"] = "merge";
+  const hasRemote = await io.hasRemoteInstance(repo, plan.branch).catch(() => false);
+  if (hasRemote) {
+    const strategyRes = await prompts.select({
+      message: `Remote already has data for instance "${plan.instanceName}". How should sync handle it?`,
+      options: [
+        { value: "merge", label: "Merge — combine local and remote data (recommended)" },
+        { value: "replace-local", label: "Replace local — overwrite local with remote (use when migrating)" },
+      ],
+    });
+    if (isCancel(strategyRes)) abort("strategy selection");
+    syncStrategy = strategyRes as SyncConfig["syncStrategy"];
+  }
 
   let action: SetupPlan["gitCryptAction"] = plan.gitCryptAction;
   if (action === "skip-sensitive") {

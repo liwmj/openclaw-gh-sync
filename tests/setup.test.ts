@@ -55,6 +55,7 @@ describe("runSetupWizard", () => {
         } as unknown as ConfigService,
         gitCryptAvailable: () => false,
         writeCredentials: (file: string, repo: string, pat: string) => written.push({ file, repo, pat }),
+        hasRemoteInstance: async () => false,
       },
       saved,
       written,
@@ -78,26 +79,29 @@ describe("runSetupWizard", () => {
     await expect(runSetupWizard({ prompts: makePrompts(["https://github.com/u/r.git", "pat", CANCEL]), io })).rejects.toThrow("setup aborted: instance name cancelled");
   });
 
-  it("aborts when strategy selection is cancelled", async () => {
-    const { io } = makeIo();
-    await expect(runSetupWizard({ prompts: makePrompts(["https://github.com/u/r.git", "pat", "box", CANCEL]), io })).rejects.toThrow("setup aborted: strategy selection cancelled");
-  });
-
   it("validates config before saving and refuses an invalid repo", async () => {
     const { io, saved, written } = makeIo();
-    await expect(runSetupWizard({ prompts: makePrompts(["https://github.com/", "pat", "box", "merge"]), io })).rejects.toThrow(/setup aborted: invalid config/);
+    await expect(runSetupWizard({ prompts: makePrompts(["https://github.com/", "pat", "box"]), io })).rejects.toThrow(/setup aborted: invalid config/);
     expect(saved).toHaveLength(0);
     expect(written).toHaveLength(0);
   });
 
   it("writes credentials under the gh-sync credentials path and returns a validated config", async () => {
     const { io, saved, written } = makeIo();
-    const cfg = await runSetupWizard({ prompts: makePrompts(["https://github.com/u/r.git", "pat-123", "Box", "merge", "degraded"]), io });
+    const cfg = await runSetupWizard({ prompts: makePrompts(["https://github.com/u/r.git", "pat-123", "Box", "degraded"]), io });
     expect(saved).toHaveLength(1);
     expect(cfg.repo).toBe("https://github.com/u/r.git");
     expect(cfg.branch).toBe("instances/box");
     expect(cfg.instanceName).toBe("box");
     expect(cfg.syncStrategy).toBe("merge");
     expect(written).toEqual([{ file: "/state/gh-sync/.git-credentials", repo: "https://github.com/u/r.git", pat: "pat-123" }]);
+  });
+
+  it("shows strategy prompt when remote has existing instance data", async () => {
+    const { io, saved, written } = makeIo();
+    io.hasRemoteInstance = async () => true;
+    const cfg = await runSetupWizard({ prompts: makePrompts(["https://github.com/u/r.git", "pat-123", "Box", "replace-local", "degraded"]), io });
+    expect(cfg.syncStrategy).toBe("replace-local");
+    expect(cfg.repo).toBe("https://github.com/u/r.git");
   });
 });
