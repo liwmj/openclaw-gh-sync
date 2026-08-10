@@ -120,6 +120,8 @@ export class GitOps {
       "*.sqlite-*",
       "*.jsonl",
       "*.jsonl.*",
+      ".local.*",
+      ".theirs.*",
       "",
     ].join("\n"));
   }
