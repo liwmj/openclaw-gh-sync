@@ -165,8 +165,7 @@ export class SyncEngine {
         const { stateDir: sd, syncDir: syD, config: cfg } = this.deps;
         const entries = buildMirrorEntries(sd, syD, cfg.include);
         const excluded = compileExcludes(cfg.exclude);
-        const mirrorRoot = entries[0]?.target ?? syD;
-        const deleted = outcome.changedFiles.filter((f) => !existsSync(join(mirrorRoot, f)));
+        const deleted = outcome.changedFiles.filter((f) => !existsSync(join(syD, f)));
         copyMirrorToSources(entries, excluded, deleted);
         this.lastPullAt = new Date().toISOString();
       }
