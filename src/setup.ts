@@ -85,7 +85,8 @@ export async function runSetupWizard(opts: {
 
   let syncStrategy: SyncConfig["syncStrategy"] = "merge";
   const hasRemote = await io.hasRemoteInstance(repo, pat, plan.branch).catch(() => false);
-  if (hasRemote) {
+  const oldCfg = io.configService.load();
+  if (hasRemote || (oldCfg && oldCfg.repo !== repo)) {
     const strategyRes = await prompts.select({
       message: `Remote already has data for instance "${plan.instanceName}". How should sync handle it?`,
       options: [
@@ -144,8 +145,7 @@ export async function runSetupWizard(opts: {
   if (!validation.ok) throw new Error(`setup aborted: invalid config: ${validation.errors.join("; ")}`);
   io.writeCredentials(credentialsPath(ghSyncDir(io.stateDir)), repo, pat);
   io.configService.save(cfg);
-  const oldCfg = io.configService.load();
-  if (!oldCfg || oldCfg.repo !== repo || oldCfg.instanceName !== plan.instanceName || syncStrategy === "replace-local") {
+  if (syncStrategy === "replace-local") {
     try {
       const { renameSync } = await import("node:fs");
       const mirror = join(io.syncDir, "openclaw");
