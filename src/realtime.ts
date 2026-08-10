@@ -6,7 +6,7 @@ import { copyAllToMirror, copyMirrorToSources, copyToMirror } from "./mirror.js"
 import { GitOps } from "./gitops.js";
 import { FileWatcher } from "./watcher.js";
 import { Poller } from "./poller.js";
-import { rmSync, existsSync } from "node:fs";
+import { rmSync, existsSync, unlinkSync } from "node:fs";
 import type { MirrorEntry } from "./types.js";
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
@@ -140,6 +140,7 @@ export class SyncEngine {
       }
     } catch (err) {
       this.deps.log(`[gh-sync] push failed: ${String(err)}`);
+      try { unlinkSync(join(this.deps.syncDir, ".git", "index.lock")); } catch {}
       this.deps.onError(err);
     } finally {
       this.releaseSync();
