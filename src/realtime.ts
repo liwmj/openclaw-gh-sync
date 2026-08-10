@@ -1,11 +1,12 @@
 import type { SyncConfig } from "./types.js";
+import { join } from "node:path";
 import { buildMirrorEntries, credentialsPath, mirrorRoot } from "./paths.js";
 import { compileExcludes } from "./exclude.js";
 import { copyAllToMirror, copyMirrorToSources, copyToMirror } from "./mirror.js";
 import { GitOps } from "./gitops.js";
 import { FileWatcher } from "./watcher.js";
 import { Poller } from "./poller.js";
-import { rmSync } from "node:fs";
+import { rmSync, existsSync } from "node:fs";
 import type { MirrorEntry } from "./types.js";
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
@@ -160,9 +161,12 @@ export class SyncEngine {
       const { gitops, syncDir, stateDir, config } = this.deps;
       const outcome = await withTimeout(gitops.pull(), 60_000);
       if (outcome.status === "ok" && outcome.changedFiles.length > 0) {
-        const entries = buildMirrorEntries(stateDir, syncDir, config.include);
-        const excluded = compileExcludes(config.exclude);
-        copyMirrorToSources(entries, excluded);
+        const { stateDir: sd, syncDir: syD, config: cfg } = this.deps;
+        const entries = buildMirrorEntries(sd, syD, cfg.include);
+        const excluded = compileExcludes(cfg.exclude);
+        const mirrorRoot = entries[0]?.target ?? syD;
+        const deleted = outcome.changedFiles.filter((f) => !existsSync(join(mirrorRoot, f)));
+        copyMirrorToSources(entries, excluded, deleted);
         this.lastPullAt = new Date().toISOString();
       }
     } catch (err) {
