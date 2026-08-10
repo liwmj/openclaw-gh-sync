@@ -145,7 +145,7 @@ export async function runSetupWizard(opts: {
   io.writeCredentials(credentialsPath(ghSyncDir(io.stateDir)), repo, pat);
   io.configService.save(cfg);
   const oldCfg = io.configService.load();
-  if (!oldCfg || oldCfg.repo !== repo || oldCfg.instanceName !== plan.instanceName || syncStrategy === "replace-local") {
+  if (syncStrategy === "replace-local") {
     try {
       const { renameSync } = await import("node:fs");
       const mirror = join(io.syncDir, "openclaw");
