@@ -4,7 +4,7 @@ OpenClaw 实时 GitHub 同步插件——将本地 OpenClaw 工作区双向同�
 
 ## 它能做什么
 
-- **多实例同步**：不同电脑、不同智能体之间共享同一套 OpenClaw 配置、工作区文件、会话记录
+- **多实例同步**：不同电脑、不同智能体之间共享同一套 OpenClaw 配置和记忆文件（MEMORY.md、IDENTITY.md 等），AI 跨设备保持一致行为
 - **备份与恢复**：定时通过 `openclaw backup create --verify` 创建官方备份存档，上传到 GitHub 仓库。误删或重装系统后一键恢复
 - **跨实例迁移**：新环境中直接从已有实例的 GitHub 分支拉取完整状态，无需手动拷贝
 - **版本历史**：所有变更通过 Git 提交，随时回溯任意时间点的状态
@@ -137,6 +137,16 @@ openclaw gh-sync restore backup-2026-08-10.tar.gz --yes
   "gitCryptEnabled": false                     // 是否启用 git-crypt 加密（默认关闭）
 }
 ```
+
+## 为什么不同步会话记录
+
+插件**默认不同步**原始对话历史（`*.jsonl` 文件），原因：
+
+1. **数据膨胀**：会话文件只增不删，单个可达几十 MB，累积数百 MB 后 push 超时、仓库臃肿
+2. **隐私安全**：对话记录含敏感内容，GitHub 明文存储风险高
+3. **记忆已覆盖**：AI 的结构化记忆（`MEMORY.md`）会自动摘要沉淀，跨设备同步后行为一致
+
+如需同步会话，在 `config.json` 的 `include` 中加入对应路径，并编辑 `.gitignore` 移除 `*.jsonl` 排除项。
 
 ## 仓库结构
 
