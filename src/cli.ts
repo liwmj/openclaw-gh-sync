@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { ConfigService } from "./config.js";
 import { buildMirrorEntries, ghSyncDir, configPath, credentialsPath } from "./paths.js";
 import { compileExcludes } from "./exclude.js";
-import { copyMirrorToSources } from "./mirror.js";
+import { copyMirrorToSources, replaceSourcesFromMirror } from "./mirror.js";
 import { buildStatus } from "./status.js";
 import { createGitOps, SyncEngine } from "./realtime.js";
 import { BackupEngine } from "./backup.js";
@@ -95,10 +95,16 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
                 cfgService.save(cfg);
               } else {
                 console.log("[gh-sync] replace-local: no backup, force-accepting remote");
+                const { renameSync, mkdirSync } = await import("node:fs");
+                const backupDir = join(sync, "backups", `pre-replace-${new Date().toISOString().replace(/[:.]/g, "-")}`);
+                mkdirSync(backupDir, { recursive: true });
+                for (const entry of buildMirrorEntries(state, sync, cfg.include)) {
+                  try { renameSync(entry.source, join(backupDir, entry.relative.replace(/\//g, "_"))); } catch {}
+                }
                 await gitops.forceAcceptRemote(cfg.branch);
                 const entries = buildMirrorEntries(state, sync, cfg.include);
                 const excluded = compileExcludes(cfg.exclude);
-                copyMirrorToSources(entries, excluded);
+                replaceSourcesFromMirror(entries, excluded);
                 console.log("[gh-sync] replace-local: remote state synced to local");
                 cfg.syncStrategy = "merge";
                 cfgService.save(cfg);

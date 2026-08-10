@@ -74,3 +74,20 @@ export function copyMirrorToSources(entries: MirrorEntry[], excluded: (rel: stri
   }
   return count;
 }
+
+export function replaceSourcesFromMirror(entries: MirrorEntry[], excluded: (rel: string) => boolean): number {
+  let count = 0;
+  for (const e of entries) {
+    cleanDirForReplace(e.source);
+    count += copyDirIfChanged(e.target, e.source, excluded, e.target);
+  }
+  return count;
+}
+
+function cleanDirForReplace(dir: string): void {
+  if (!existsSync(dir)) return;
+  for (const name of readdirSync(dir)) {
+    if (name === ".git") continue;
+    rmSync(join(dir, name), { recursive: true, force: true });
+  }
+}
