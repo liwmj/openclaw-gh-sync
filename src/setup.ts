@@ -91,8 +91,8 @@ export async function runSetupWizard(opts: {
     const strategyRes = await prompts.select({
       message: `${reason} How should sync handle it?`,
       options: [
-        { value: "merge", label: "Merge — combine local and remote data (recommended)" },
-        { value: "replace-local", label: "Replace local — overwrite local with remote (use when migrating)" },
+        { value: "merge", label: hasRemote ? "Merge — combine local and remote data (recommended)" : "Keep local — push current state to the new repository" },
+        { value: "replace-local", label: hasRemote ? "Replace local — overwrite local with remote (use when migrating)" : "Start fresh — back up old data and begin clean on new repository" },
       ],
     });
     if (isCancel(strategyRes)) abort("strategy selection");
