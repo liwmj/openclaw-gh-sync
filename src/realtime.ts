@@ -130,12 +130,15 @@ export class SyncEngine {
     }
     this.isSyncing = true;
     try {
+      this.deps.log("[gh-sync] pushing...");
       const committed = await withTimeout(this.deps.gitops.commitChanged(`Auto-sync: ${new Date().toISOString()}`), 30_000);
       if (committed) {
         await withTimeout(this.deps.gitops.push(), 60_000);
         this.lastPushAt = new Date().toISOString();
+        this.deps.log("[gh-sync] push completed");
       }
     } catch (err) {
+      this.deps.log(`[gh-sync] push failed: ${String(err)}`);
       this.deps.onError(err);
     } finally {
       this.releaseSync();

@@ -82,7 +82,7 @@ export async function runSetupWizard(opts: {
   });
 
   let syncStrategy: SyncConfig["syncStrategy"] = "merge";
-  const hasRemote = await io.hasRemoteInstance(repo, pat, plan.branch).catch(() => false) || await io.hasRemoteInstance(repo, pat, "HEAD").catch(() => false);
+  const hasRemote = await io.hasRemoteInstance(repo, pat, plan.branch).catch(() => false);
   if (hasRemote) {
     const strategyRes = await prompts.select({
       message: `Remote already has data for instance "${plan.instanceName}". How should sync handle it?`,
