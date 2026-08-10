@@ -141,6 +141,7 @@ export class SyncEngine {
     } catch (err) {
       this.deps.log(`[gh-sync] push failed: ${String(err)}`);
       try { unlinkSync(join(this.deps.syncDir, ".git", "index.lock")); } catch {}
+      this.pendingPush = true;
       this.deps.onError(err);
     } finally {
       this.releaseSync();

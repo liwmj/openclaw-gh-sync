@@ -1,6 +1,6 @@
 {
   "name": "@liwmj/openclaw-gh-sync",
-  "version": "0.6.9",
+  "version": "0.6.10",
   "description": "Real-time GitHub sync and official-backup archive upload for OpenClaw",
   "type": "module",
   "main": "dist/index.js",
