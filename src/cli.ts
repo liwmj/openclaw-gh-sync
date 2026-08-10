@@ -96,12 +96,20 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
                 cfgService.save(cfg);
               } else {
                 console.log("[gh-sync] replace-local: no backup, force-accepting remote");
-                const { renameSync, mkdirSync } = await import("node:fs");
+                const { renameSync, mkdirSync, rmSync, readdirSync } = await import("node:fs");
                 const { tmpdir } = await import("node:os");
                 const backupDir = join(tmpdir(), `gh-sync-pre-replace-${new Date().toISOString().replace(/[:.]/g, "-")}`);
                 mkdirSync(backupDir, { recursive: true });
                 for (const entry of buildMirrorEntries(state, sync, cfg.include)) {
-                  try { renameSync(entry.source, join(backupDir, entry.relative.replace(/\//g, "_"))); } catch {}
+                  try { renameSync(entry.source, join(backupDir, entry.relative.replace(/\//g, "_"))); }
+                  catch {
+                    for (const name of readdirSync(entry.source)) {
+                      if (name === ".git") continue;
+                      try { renameSync(join(entry.source, name), join(backupDir, name)); } catch {
+                        try { rmSync(join(entry.source, name), { recursive: true, force: true }); } catch {}
+                      }
+                    }
+                  }
                 }
                 await gitops.forceAcceptRemote(cfg.branch);
                 const entries = buildMirrorEntries(state, sync, cfg.include);
@@ -179,12 +187,20 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
       if (!gitops) return "not configured";
       console.log("[gh-sync] reset: fetching remote...");
       if (!(await gitops.fetchBranch(cfg.branch))) return "no remote data to pull";
-      const { mkdirSync, renameSync } = await import("node:fs");
+      const { mkdirSync, renameSync, rmSync, readdirSync } = await import("node:fs");
       const { tmpdir } = await import("node:os");
       const backupDir = join(tmpdir(), `gh-sync-reset-${new Date().toISOString().replace(/[:.]/g, "-")}`);
       mkdirSync(backupDir, { recursive: true });
       for (const entry of buildMirrorEntries(state, sync, cfg.include)) {
-        try { renameSync(entry.source, join(backupDir, entry.relative.replace(/\//g, "_"))); } catch {}
+        try { renameSync(entry.source, join(backupDir, entry.relative.replace(/\//g, "_"))); }
+        catch {
+          for (const name of readdirSync(entry.source)) {
+            if (name === ".git") continue;
+            try { renameSync(join(entry.source, name), join(backupDir, name)); } catch {
+              try { rmSync(join(entry.source, name), { recursive: true, force: true }); } catch {}
+            }
+          }
+        }
       }
       await gitops.forceAcceptRemote(cfg.branch);
       const entries = buildMirrorEntries(state, sync, cfg.include);
