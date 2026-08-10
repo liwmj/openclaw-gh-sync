@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import type { MirrorEntry } from "./types.js";
 
@@ -70,9 +70,29 @@ export function copyToMirror(entries: MirrorEntry[], sourcePaths: string[], excl
 export function copyMirrorToSources(entries: MirrorEntry[], excluded: (rel: string) => boolean): number {
   let count = 0;
   for (const e of entries) {
+    cleanStaleFromSource(e.source, e.target, excluded);
     count += copyDirIfChanged(e.target, e.source, excluded, e.target);
   }
   return count;
+}
+
+function cleanStaleFromSource(srcDir: string, tgtDir: string, excluded: (rel: string) => boolean, root = tgtDir): void {
+  if (!existsSync(srcDir)) return;
+  for (const name of readdirSync(srcDir)) {
+    if (name === ".git" || name === "node_modules") continue;
+    const srcPath = join(srcDir, name);
+    const tgtPath = join(tgtDir, name);
+    if (!existsSync(tgtPath)) {
+      if (!existsSync(srcPath)) continue;
+      const rel = relative(root, srcPath);
+      if (excluded(rel.replace(/^\.\.\//, ""))) continue;
+      rmSync(srcPath, { recursive: true, force: true });
+      continue;
+    }
+    if (lstatSync(srcPath).isDirectory() && lstatSync(tgtPath).isDirectory()) {
+      cleanStaleFromSource(srcPath, tgtPath, excluded, root);
+    }
+  }
 }
 
 export function replaceSourcesFromMirror(entries: MirrorEntry[], excluded: (rel: string) => boolean): number {
