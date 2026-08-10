@@ -87,7 +87,6 @@ export function replaceSourcesFromMirror(entries: MirrorEntry[], excluded: (rel:
 function cleanDirForReplace(dir: string): void {
   if (!existsSync(dir)) return;
   for (const name of readdirSync(dir)) {
-    if (name === ".git") continue;
     rmSync(join(dir, name), { recursive: true, force: true });
   }
 }
