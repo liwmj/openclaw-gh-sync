@@ -1,5 +1,5 @@
 import type { SyncConfig } from "./types.js";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { buildMirrorEntries, credentialsPath, mirrorRoot } from "./paths.js";
 import { compileExcludes } from "./exclude.js";
 import { copyAllToMirror, copyMirrorToSources, copyToMirror } from "./mirror.js";
@@ -165,7 +165,16 @@ export class SyncEngine {
         const { stateDir: sd, syncDir: syD, config: cfg } = this.deps;
         const entries = buildMirrorEntries(sd, syD, cfg.include);
         const excluded = compileExcludes(cfg.exclude);
-        const deleted = outcome.changedFiles.filter((f) => !existsSync(join(syD, f)));
+        const deleted = outcome.changedFiles
+          .filter((f) => !existsSync(join(syD, f)))
+          .map((f) => {
+            const abs = join(syD, f);
+            for (const e of entries) {
+              if (abs.startsWith(e.target)) return relative(e.target, abs);
+            }
+            return null;
+          })
+          .filter(Boolean) as string[];
         copyMirrorToSources(entries, excluded, deleted);
         this.lastPullAt = new Date().toISOString();
       }
