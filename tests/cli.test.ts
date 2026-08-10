@@ -144,12 +144,13 @@ describe("registerCommands", () => {
       stop: async () => {},
       conflicts: async () => "",
       setup: async () => "",
+      reset: async () => "",
     } as Runtime;
 
     registerCommands(program, rt);
 
     const names = registered.map((r) => r.name);
-    expect(names).toEqual(["status", "push", "pull", "sync", "backup", "restore [snapshot]", "conflicts", "setup"]);
+    expect(names).toEqual(["status", "push", "pull", "sync", "backup", "restore [snapshot]", "conflicts", "setup", "reset"]);
     expect(registered.every((r) => r.desc.length > 0)).toBe(true);
   });
 });

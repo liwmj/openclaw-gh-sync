@@ -24,6 +24,7 @@ export interface Runtime {
   stop(): Promise<void>;
   conflicts(): Promise<string>;
   setup(): Promise<string>;
+  reset(): Promise<string>;
 }
 
 export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }): Runtime {
@@ -96,7 +97,8 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
               } else {
                 console.log("[gh-sync] replace-local: no backup, force-accepting remote");
                 const { renameSync, mkdirSync } = await import("node:fs");
-                const backupDir = join(sync, "backups", `pre-replace-${new Date().toISOString().replace(/[:.]/g, "-")}`);
+                const { tmpdir } = await import("node:os");
+                const backupDir = join(tmpdir(), `gh-sync-pre-replace-${new Date().toISOString().replace(/[:.]/g, "-")}`);
                 mkdirSync(backupDir, { recursive: true });
                 for (const entry of buildMirrorEntries(state, sync, cfg.include)) {
                   try { renameSync(entry.source, join(backupDir, entry.relative.replace(/\//g, "_"))); } catch {}
@@ -172,6 +174,24 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
       });
       return `setup complete: instance ${result.instanceName} on branch ${result.branch}`;
     },
+    async reset() {
+      const { cfg } = await ensureReady();
+      if (!gitops) return "not configured";
+      console.log("[gh-sync] reset: fetching remote...");
+      if (!(await gitops.fetchBranch(cfg.branch))) return "no remote data to pull";
+      const { mkdirSync, renameSync } = await import("node:fs");
+      const { tmpdir } = await import("node:os");
+      const backupDir = join(tmpdir(), `gh-sync-reset-${new Date().toISOString().replace(/[:.]/g, "-")}`);
+      mkdirSync(backupDir, { recursive: true });
+      for (const entry of buildMirrorEntries(state, sync, cfg.include)) {
+        try { renameSync(entry.source, join(backupDir, entry.relative.replace(/\//g, "_"))); } catch {}
+      }
+      await gitops.forceAcceptRemote(cfg.branch);
+      const entries = buildMirrorEntries(state, sync, cfg.include);
+      const excluded = compileExcludes(cfg.exclude);
+      replaceSourcesFromMirror(entries, excluded);
+      return "local state replaced with remote";
+    },
   };
 }
 
@@ -233,5 +253,9 @@ export function registerCommands(program: CommanderProgram, rt: Runtime): void {
 
   ghSync.command("setup").description("Interactive first-time configuration").action(async () => {
     console.log(await rt.setup());
+  });
+
+  ghSync.command("reset").description("Replace local state with remote data (backup old files)").action(async () => {
+    console.log(await rt.reset());
   });
 }
