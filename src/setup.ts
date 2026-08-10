@@ -87,8 +87,9 @@ export async function runSetupWizard(opts: {
   const hasRemote = await io.hasRemoteInstance(repo, pat, plan.branch).catch(() => false);
   const oldCfg = io.configService.load();
   if (hasRemote || (oldCfg && oldCfg.repo !== repo)) {
+    const reason = hasRemote ? `Remote already has data for instance "${plan.instanceName}".` : "Repository address has changed.";
     const strategyRes = await prompts.select({
-      message: `Remote already has data for instance "${plan.instanceName}". How should sync handle it?`,
+      message: `${reason} How should sync handle it?`,
       options: [
         { value: "merge", label: "Merge — combine local and remote data (recommended)" },
         { value: "replace-local", label: "Replace local — overwrite local with remote (use when migrating)" },
