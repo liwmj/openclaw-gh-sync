@@ -119,6 +119,7 @@ export class SyncEngine {
       const excluded = compileExcludes(config.exclude);
       const filtered = paths.filter((p) => !excluded(p.replace(stateDir + "/", "")));
       copyToMirror(entries, filtered, excluded);
+      this.pushFailures = 0;
       await this.pushNow();
     } catch (err) {
       this.deps.onError(err);
@@ -144,7 +145,7 @@ export class SyncEngine {
       this.deps.log(`[gh-sync] push failed: ${String(err)}`);
       try { unlinkSync(join(this.deps.syncDir, ".git", "index.lock")); } catch {}
       this.pushFailures += 1;
-      if (this.pushFailures <= 3) {
+      if (this.pushFailures <= 5) {
         this.pendingPush = true;
       } else {
         this.deps.log(`[gh-sync] push failed ${this.pushFailures} times, giving up until next change`);
