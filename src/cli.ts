@@ -13,6 +13,13 @@ import { runSetupWizard } from "./setup.js";
 import { findConflictFiles } from "./conflicts.js";
 import type { SyncStatus } from "./types.js";
 
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`operation timed out after ${ms}ms`)), ms);
+    p.then((v) => { clearTimeout(timer); resolve(v); }, (e) => { clearTimeout(timer); reject(e); });
+  });
+}
+
 export interface Runtime {
   status(): Promise<SyncStatus>;
   syncNow(): Promise<string>;
@@ -87,7 +94,7 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
         if (cfg.syncStrategy === "replace-local" && gitops) {
           console.log("[gh-sync] replace-local: fetching remote...");
           try {
-            if (await gitops.fetchBranch(cfg.branch)) {
+            if (await withTimeout(gitops.fetchBranch(cfg.branch), 30_000)) {
               console.log("[gh-sync] replace-local: remote branch found, restoring...");
               const restored = await restoreEngine!.restore({ fromInstance: cfg.instanceName, yes: true }).catch(() => null);
               if (restored) {
@@ -111,7 +118,7 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
                     }
                   }
                 }
-                await gitops.forceAcceptRemote(cfg.branch);
+                await withTimeout(gitops.forceAcceptRemote(cfg.branch), 30_000);
                 const entries = buildMirrorEntries(state, sync, cfg.include);
                 const excluded = compileExcludes(cfg.exclude);
                 copyMirrorToSources(entries, excluded);
@@ -186,7 +193,7 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
       const { cfg } = await ensureReady();
       if (!gitops) return "not configured";
       console.log("[gh-sync] reset: fetching remote...");
-      if (!(await gitops.fetchBranch(cfg.branch))) return "no remote data to pull";
+      if (!(await withTimeout(gitops.fetchBranch(cfg.branch), 30_000))) return "no remote data to pull";
       const { mkdirSync, renameSync, rmSync, readdirSync } = await import("node:fs");
       const { tmpdir } = await import("node:os");
       const backupDir = join(tmpdir(), `gh-sync-reset-${new Date().toISOString().replace(/[:.]/g, "-")}`);
@@ -202,7 +209,7 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
           }
         }
       }
-      await gitops.forceAcceptRemote(cfg.branch);
+      await withTimeout(gitops.forceAcceptRemote(cfg.branch), 30_000);
       const entries = buildMirrorEntries(state, sync, cfg.include);
       const excluded = compileExcludes(cfg.exclude);
       copyMirrorToSources(entries, excluded);

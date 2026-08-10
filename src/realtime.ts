@@ -71,7 +71,7 @@ export class SyncEngine {
       try {
         const { syncDir, stateDir, config, gitops, log } = this.deps;
         log("starting sync engine");
-        await gitops.initRepo();
+        await withTimeout(gitops.initRepo(), 60_000);
         const entries = buildMirrorEntries(stateDir, syncDir, config.include);
         const excluded = compileExcludes(config.exclude);
         cleanMirror(entries);
