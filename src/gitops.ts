@@ -19,8 +19,8 @@ export class GitOps {
     const isRepo = await this.git.checkIsRepo();
     if (!isRepo) {
       await this.git.init();
-      this.writeGitignore();
     }
+    this.writeGitignore();
     const authedUrl = this.pat ? this.repoUrl.replace("https://", `https://x-access-token:${encodeURIComponent(this.pat)}@`) : this.repoUrl;
     const remotes = await this.git.getRemotes(true);
     const origin = remotes.find((r) => r.name === "origin");
@@ -113,9 +113,9 @@ export class GitOps {
 
   private writeGitignore(): void {
     const ignorePath = join(this.syncDir, ".gitignore");
-    if (existsSync(ignorePath)) return;
     fsWriteFileSync(ignorePath, [
       ".git-credentials",
+      "backups/",
       "*.sqlite",
       "*.sqlite-*",
       "*.jsonl",
