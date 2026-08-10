@@ -94,7 +94,7 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
         if (cfg.syncStrategy === "replace-local" && gitops) {
           console.log("[gh-sync] replace-local: fetching remote...");
           try {
-            if (await withTimeout(gitops.fetchBranch(cfg.branch), 30_000)) {
+            if (await withTimeout(gitops.fetchBranch(cfg.branch), 90_000)) {
               console.log("[gh-sync] replace-local: remote branch found, restoring...");
               const restored = await restoreEngine!.restore({ fromInstance: cfg.instanceName, yes: true }).catch(() => null);
               if (restored) {
@@ -118,7 +118,7 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
                     }
                   }
                 }
-                await withTimeout(gitops.forceAcceptRemote(cfg.branch), 30_000);
+                await withTimeout(gitops.forceAcceptRemote(cfg.branch), 90_000);
                 const entries = buildMirrorEntries(state, sync, cfg.include);
                 const excluded = compileExcludes(cfg.exclude);
                 copyMirrorToSources(entries, excluded);
@@ -193,7 +193,7 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
       const { cfg } = await ensureReady();
       if (!gitops) return "not configured";
       console.log("[gh-sync] reset: fetching remote...");
-      if (!(await withTimeout(gitops.fetchBranch(cfg.branch), 30_000))) return "no remote data to pull";
+      if (!(await withTimeout(gitops.fetchBranch(cfg.branch), 90_000))) return "no remote data to pull";
       const { mkdirSync, renameSync, rmSync, readdirSync } = await import("node:fs");
       const { tmpdir } = await import("node:os");
       const backupDir = join(tmpdir(), `gh-sync-reset-${new Date().toISOString().replace(/[:.]/g, "-")}`);
@@ -209,7 +209,7 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
           }
         }
       }
-      await withTimeout(gitops.forceAcceptRemote(cfg.branch), 30_000);
+      await withTimeout(gitops.forceAcceptRemote(cfg.branch), 90_000);
       const entries = buildMirrorEntries(state, sync, cfg.include);
       const excluded = compileExcludes(cfg.exclude);
       copyMirrorToSources(entries, excluded);
