@@ -1,4 +1,6 @@
 import { isCancel } from "@clack/prompts";
+import { rmSync } from "node:fs";
+import { join } from "node:path";
 import { sanitizeInstanceName, type ConfigService } from "./config.js";
 import { DEFAULT_CONFIG } from "./config.js";
 import { credentialsPath, ghSyncDir } from "./paths.js";
@@ -142,5 +144,6 @@ export async function runSetupWizard(opts: {
   if (!validation.ok) throw new Error(`setup aborted: invalid config: ${validation.errors.join("; ")}`);
   io.writeCredentials(credentialsPath(ghSyncDir(io.stateDir)), repo, pat);
   io.configService.save(cfg);
+  try { rmSync(join(io.syncDir, ".git"), { recursive: true, force: true }); } catch {}
   return cfg;
 }
