@@ -32,6 +32,16 @@ export class GitOps {
     }
     await this.fetch();
     await this.ensureBranch(this.branch);
+    await this.cleanStaleInstanceBranches();
+  }
+
+  private async cleanStaleInstanceBranches(): Promise<void> {
+    const branches = await this.git.branchLocal();
+    for (const b of branches.all) {
+      if (b.startsWith("instances/") && b !== this.branch && b !== branches.current) {
+        await this.git.deleteLocalBranch(b, true).catch(() => {});
+      }
+    }
   }
 
   async ensureBranch(name: string): Promise<void> {
