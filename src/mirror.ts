@@ -70,18 +70,7 @@ export function copyToMirror(entries: MirrorEntry[], sourcePaths: string[], excl
 export function copyMirrorToSources(entries: MirrorEntry[], excluded: (rel: string) => boolean): number {
   let count = 0;
   for (const e of entries) {
-    cleanDir(e.source, excluded, e.target);
     count += copyDirIfChanged(e.target, e.source, excluded, e.target);
   }
   return count;
-}
-
-function cleanDir(dir: string, excluded: (rel: string) => boolean, mirrorRoot: string): void {
-  if (!existsSync(dir)) return;
-  for (const name of readdirSync(dir)) {
-    const p = join(dir, name);
-    if (name === ".git" || name === "node_modules") continue;
-    if (excluded(relative(mirrorRoot, p))) continue;
-    rmSync(p, { recursive: true, force: true });
-  }
 }
