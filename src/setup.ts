@@ -144,13 +144,16 @@ export async function runSetupWizard(opts: {
   if (!validation.ok) throw new Error(`setup aborted: invalid config: ${validation.errors.join("; ")}`);
   io.writeCredentials(credentialsPath(ghSyncDir(io.stateDir)), repo, pat);
   io.configService.save(cfg);
-  try {
-    const { renameSync } = await import("node:fs");
-    const mirror = join(io.syncDir, "openclaw");
-    const ts = new Date().toISOString().replace(/[:.]/g, "-");
-    renameSync(mirror, join(io.syncDir, "backups", `pre-setup-${ts}`));
-  } catch {}
-  try { rmSync(join(io.syncDir, ".git"), { recursive: true, force: true }); } catch {}
-  try { rmSync(join(io.syncDir, "openclaw"), { recursive: true, force: true }); } catch {}
+  const oldCfg = io.configService.load();
+  if (!oldCfg || oldCfg.repo !== repo || oldCfg.instanceName !== plan.instanceName) {
+    try {
+      const { renameSync } = await import("node:fs");
+      const mirror = join(io.syncDir, "openclaw");
+      const ts = new Date().toISOString().replace(/[:.]/g, "-");
+      renameSync(mirror, join(io.syncDir, "backups", `pre-setup-${ts}`));
+    } catch {}
+    try { rmSync(join(io.syncDir, ".git"), { recursive: true, force: true }); } catch {}
+    try { rmSync(join(io.syncDir, "openclaw"), { recursive: true, force: true }); } catch {}
+  }
   return cfg;
 }
