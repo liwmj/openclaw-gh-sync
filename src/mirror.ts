@@ -48,8 +48,13 @@ export function copyToMirror(entries: MirrorEntry[], sourcePaths: string[], excl
     for (const sp of sourcePaths) {
       const rel = relative(e.source, sp);
       if (rel.startsWith("..") || excluded(rel)) continue;
-      const st = statSync(sp);
       const tgt = join(e.target, rel);
+      let st;
+      try { st = statSync(sp); } catch { st = null; }
+      if (!st) {
+        try { rmSync(tgt, { force: true }); count += 1; } catch {}
+        continue;
+      }
       if (st.isDirectory()) {
         count += copyDirIfChanged(sp, tgt, excluded, e.source);
       } else if (!fileEq(sp, tgt)) {
