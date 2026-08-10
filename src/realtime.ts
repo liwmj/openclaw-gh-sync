@@ -51,6 +51,7 @@ export class SyncEngine {
   private lastPushAt: string | null = null;
   private lastPullAt: string | null = null;
   private started = false;
+  private pushFailures = 0;
   private lock = Promise.resolve();
 
   constructor(private readonly deps: SyncDeps) {}
@@ -137,11 +138,17 @@ export class SyncEngine {
         await withTimeout(this.deps.gitops.push(), 60_000);
         this.lastPushAt = new Date().toISOString();
         this.deps.log("[gh-sync] push completed");
+        this.pushFailures = 0;
       }
     } catch (err) {
       this.deps.log(`[gh-sync] push failed: ${String(err)}`);
       try { unlinkSync(join(this.deps.syncDir, ".git", "index.lock")); } catch {}
-      this.pendingPush = true;
+      this.pushFailures += 1;
+      if (this.pushFailures <= 3) {
+        this.pendingPush = true;
+      } else {
+        this.deps.log(`[gh-sync] push failed ${this.pushFailures} times, giving up until next change`);
+      }
       this.deps.onError(err);
     } finally {
       this.releaseSync();
