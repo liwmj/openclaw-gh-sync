@@ -47,18 +47,35 @@ export function createCustomArchive(
   return archive;
 }
 
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`operation timed out after ${ms}ms`)), ms);
+    p.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
+    );
+  });
+}
+
 export class BackupEngine {
   constructor(private readonly deps: BackupDeps) {}
 
   // 备份 push 的是大文件（全量 ~68MB tar.gz），网络抖动时一次失败直接抛错体验差。
   // 加最多 3 次重试，间隔递增（2s/5s/10s），重试仍失败才抛出。
+  // Bug G 修复：每次 push 包 60s 超时，防止网络不通时 git 卡在 connect 阶段无限挂起。
   private async pushWithRetry(): Promise<void> {
     const { gitops, log } = this.deps;
     const delays = [2000, 5000, 10000];
     let lastErr: unknown;
     for (let attempt = 0; attempt <= delays.length; attempt++) {
       try {
-        await gitops.push();
+        await withTimeout(gitops.push(), 60_000);
         return;
       } catch (err) {
         lastErr = err;
