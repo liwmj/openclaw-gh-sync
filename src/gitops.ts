@@ -12,15 +12,13 @@ export class GitOps {
     private readonly branch: string,
     private readonly pat: string | null,
   ) {
-    this.git = simpleGit(syncDir).env({
+    this.git = simpleGit({ baseDir: syncDir, timeout: { block: 30_000 } }).env({
       LANG: "C",
       LC_ALL: "C",
       LC_MESSAGES: "C",
-      // Bug B 修复：http(s) 连接无数据传输超 30s 时 git 自身中止，防止超时后子进程残留累积
+      // Bug B 修复：http(s) 传输阶段无数据超 30s 时 git 自身中止，防止超时后子进程残留累积
       GIT_HTTP_LOW_SPEED_LIMIT: "1",
       GIT_HTTP_LOW_SPEED_TIME: "30",
-      // Bug C 修复：连接阶段（TCP connect）也卡死时 lowSpeedLimit 不生效，加 connect 超时兜底
-      GIT_HTTP_CONNECT_TIMEOUT: "30",
     });
   }
 
