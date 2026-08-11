@@ -15,7 +15,7 @@ describe("BackupEngine", () => {
     writeFileSync(join(stateDir, "memory", "notes.md"), "notes");
     writeFileSync(join(stateDir, "openclaw.json"), "{}");
     const out = mkdtempSync(join(tmpdir(), "bk-"));
-    const path = createCustomArchive(stateDir, out);
+    const path = createCustomArchive(stateDir, out, ["workspace"]);
     expect(existsSync(path)).toBe(true);
     expect(path).toContain("gh-sync-backup-");
     rmSync(out, { recursive: true, force: true });
@@ -33,7 +33,7 @@ describe("BackupEngine", () => {
     mkdirSync(syncDir, { recursive: true });
     const ops = new GitOps(syncDir, url, "instances/a", null);
     await ops.initRepo();
-    const engine = new BackupEngine({ stateDir, syncDir, backupsDir: backups, retain: 7, gitops: ops, log: () => {} });
+    const engine = new BackupEngine({ stateDir, syncDir, backupsDir: backups, retain: 7, include: ["workspace"], gitops: ops, log: () => {} });
     const result = await engine.backupNow();
     expect(result).not.toBeNull();
     expect(result!.archivePath).toContain("backups");
@@ -53,7 +53,7 @@ describe("BackupEngine", () => {
 
     const ops = new GitOps(syncDir, url, "instances/a", null);
     await ops.initRepo();
-    const engine = new BackupEngine({ stateDir, syncDir, backupsDir: backups, retain: 2, gitops: ops, log: () => {} });
+    const engine = new BackupEngine({ stateDir, syncDir, backupsDir: backups, retain: 2, include: ["workspace"], gitops: ops, log: () => {} });
 
     const files = ["a.tar.gz", "b.tar.gz", "c.tar.gz", "d.tar.gz", "e.tar.gz"];
     const now = Date.now();

@@ -17,18 +17,21 @@ export interface BackupDeps {
   syncDir: string;
   backupsDir: string;
   retain: number;
+  include: string[];
   gitops: { commitChanged(message: string): Promise<boolean>; push(): Promise<void> };
   log: (m: string) => void;
 }
 
-// 方案 A：自定义轻量备份，只打包核心资产（workspace + memory + 根级配置），
+// 方案 A：自定义轻量备份，只打包核心资产。
+// 备份内容 = 插件配置的 include 同步目录（默认 workspace，用户可配）+ 配置文件本身（openclaw.json）。
 // 不再调用 openclaw backup create（官方全量备份 ~/.openclaw 达 1GB，含 tools/extensions/npm
 // 等可重装内容，体积大导致 push 不稳、仓库膨胀）。
-const BACKUP_ITEMS = ["workspace", "memory", "openclaw.json"];
+const CONFIG_FILE = "openclaw.json";
 
 export function createCustomArchive(
   stateDir: string,
   outputDir: string,
+  include: string[],
   spawnFn: SpawnFn = (cmd, args) => {
     const res = spawnSync(cmd, args, { encoding: "utf8" });
     return { status: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
@@ -37,7 +40,7 @@ export function createCustomArchive(
   mkdirSync(outputDir, { recursive: true });
   const name = `gh-sync-backup-${new Date().toISOString().replace(/[:.]/g, "-")}.tar.gz`;
   const archive = join(outputDir, name);
-  const items = BACKUP_ITEMS.filter((rel) => existsSync(join(stateDir, rel)));
+  const items = [...new Set([...include, CONFIG_FILE])].filter((rel) => existsSync(join(stateDir, rel)));
   const res = spawnFn("tar", ["-czf", archive, "-C", stateDir, ...items]);
   if (res.status !== 0) throw new Error(`backup archive failed: ${res.stderr}`);
   if (!existsSync(archive)) throw new Error("backup archive was not created");
@@ -75,7 +78,7 @@ export class BackupEngine {
     const tmpOut = mkdtempSync(join(tmpdir(), "gh-sync-backup-"));
     let archive: string;
     try {
-      archive = createCustomArchive(this.deps.stateDir, tmpOut, spawnFn);
+      archive = createCustomArchive(this.deps.stateDir, tmpOut, this.deps.include, spawnFn);
     } catch (err) {
       rmSync(tmpOut, { recursive: true, force: true });
       throw err;
