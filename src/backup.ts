@@ -21,7 +21,12 @@ export interface BackupDeps {
   log: (m: string) => void;
 }
 
-export function runBackupCli(
+// 方案 A：自定义轻量备份，只打包核心资产（workspace + memory + 根级配置），
+// 不再调用 openclaw backup create（官方全量备份 ~/.openclaw 达 1GB，含 tools/extensions/npm
+// 等可重装内容，体积大导致 push 不稳、仓库膨胀）。
+const BACKUP_ITEMS = ["workspace", "memory", "openclaw.json"];
+
+export function createCustomArchive(
   stateDir: string,
   outputDir: string,
   spawnFn: SpawnFn = (cmd, args) => {
@@ -29,11 +34,13 @@ export function runBackupCli(
     return { status: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
   },
 ): string {
-  const res = spawnFn(process.env.GH_SYNC_BACKUP_CLI || "openclaw", ["backup", "create", "--verify", "--output", outputDir, "--json"]);
-  if (res.status !== 0) throw new Error(`openclaw backup failed: ${res.stderr}`);
-  const parsed = JSON.parse(res.stdout) as { archive?: string; archivePath?: string };
-  const archive = parsed.archivePath ?? parsed.archive;
-  if (!archive) throw new Error("openclaw backup did not return an archive path");
+  mkdirSync(outputDir, { recursive: true });
+  const name = `gh-sync-backup-${new Date().toISOString().replace(/[:.]/g, "-")}.tar.gz`;
+  const archive = join(outputDir, name);
+  const items = BACKUP_ITEMS.filter((rel) => existsSync(join(stateDir, rel)));
+  const res = spawnFn("tar", ["-czf", archive, "-C", stateDir, ...items]);
+  if (res.status !== 0) throw new Error(`backup archive failed: ${res.stderr}`);
+  if (!existsSync(archive)) throw new Error("backup archive was not created");
   return archive;
 }
 
@@ -64,13 +71,11 @@ export class BackupEngine {
   async backupNow(spawnFn?: SpawnFn): Promise<BackupResult | null> {
     const { backupsDir, gitops, log } = this.deps;
     mkdirSync(backupsDir, { recursive: true });
-    // Bug D 修复：openclaw backup 的源路径是 stateDir（如 ~/.openclaw），
-    // 输出目录不能在源路径内部，否则 openclaw 拒绝「备份输出到源路径内部」。
-    // 先输出到系统临时目录（stateDir 外部），成功后再移动进 backupsDir。
+    // 方案 A：自定义轻量备份。先输出到系统临时目录，成功后再移动进 backupsDir。
     const tmpOut = mkdtempSync(join(tmpdir(), "gh-sync-backup-"));
     let archive: string;
     try {
-      archive = runBackupCli(this.deps.stateDir, tmpOut, spawnFn);
+      archive = createCustomArchive(this.deps.stateDir, tmpOut, spawnFn);
     } catch (err) {
       rmSync(tmpOut, { recursive: true, force: true });
       throw err;

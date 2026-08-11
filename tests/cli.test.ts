@@ -65,7 +65,8 @@ describe("CLI runtime", () => {
     cfgService.save({ ...DEFAULT_CONFIG, repo: FAKE_REPO, branch: "instances/desktop", instanceName: "desktop" });
 
     const binDir = mkdtempSync(join(tmpdir(), "cli-bin-"));
-    writeFileSync(join(binDir, "openclaw"), "#!/bin/sh\necho '{\"archive\": \"/nonexistent/backup.tar.gz\"}'\n", { mode: 0o755 });
+    // 自定义备份走 tar 打包；放一个失败的 tar 在 PATH 前面模拟打包失败
+    writeFileSync(join(binDir, "tar"), "#!/bin/sh\nexit 1\n", { mode: 0o755 });
     const prevPath = process.env.PATH;
     process.env.PATH = `${binDir}:${prevPath ?? ""}`;
 

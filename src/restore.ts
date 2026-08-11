@@ -22,9 +22,11 @@ export function listSnapshots(backupsDir: string): string[] {
   return readdirSync(backupsDir).filter((f) => f.endsWith(".tar.gz"));
 }
 
+// 方案 A：自定义轻量备份格式（tar.gz 含 workspace/memory/openclaw.json），
+// 不再依赖 openclaw backup verify，改用 tar 列表校验。
 export function verifyArchive(archivePath: string): Promise<boolean> {
   return new Promise((resolve) => {
-    const res = spawnSync(process.env.GH_SYNC_BACKUP_CLI || "openclaw", ["backup", "verify", archivePath], { stdio: "ignore" });
+    const res = spawnSync("tar", ["-tzf", archivePath], { stdio: "ignore" });
     resolve(res.status === 0);
   });
 }

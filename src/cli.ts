@@ -78,10 +78,14 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
     },
     async backupNow() {
       await ensureReady();
-      const res = await backupEngine!.backupNow();
-      if (!res) return "backup failed";
-      lastBackupAt = new Date().toISOString();
-      return `backup uploaded: ${res.archivePath}`;
+      try {
+        const res = await backupEngine!.backupNow();
+        if (!res) return "backup failed";
+        lastBackupAt = new Date().toISOString();
+        return `backup uploaded: ${res.archivePath}`;
+      } catch {
+        return "backup failed";
+      }
     },
     async restore(o) {
       await ensureReady();

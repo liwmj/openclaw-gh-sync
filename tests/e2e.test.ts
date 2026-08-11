@@ -10,7 +10,6 @@ import { GitOps } from "../src/gitops.js";
 import { cleanup, makeBareRepo } from "./helpers/git-env.js";
 
 const FAKE_REPO = "https://github.com/gh-sync-test/local";
-const FAKE_BACKUP_CLI = fileURLToPath(new URL("./helpers/fake-backup-cli.sh", import.meta.url));
 
 describe("e2e", () => {
   it("full lifecycle: setup-config → start → push → remote pull → backup → restore preview", async () => {
@@ -25,8 +24,6 @@ describe("e2e", () => {
     const cfgService = new ConfigService(join(syncDir, "config.json"));
     cfgService.save({ ...DEFAULT_CONFIG, repo: FAKE_REPO, branch: "instances/desktop", instanceName: "desktop" });
 
-    const prevBackupCli = process.env.GH_SYNC_BACKUP_CLI;
-    process.env.GH_SYNC_BACKUP_CLI = FAKE_BACKUP_CLI;
     const dirs: string[] = [bareDir, root];
     const rt = createRuntime({ stateDir, env: { ...process.env } });
     try {
@@ -56,7 +53,6 @@ describe("e2e", () => {
       expect(restoreOut).toContain("preview");
     } finally {
       await rt.stop();
-      process.env.GH_SYNC_BACKUP_CLI = prevBackupCli;
       cleanup(...dirs);
     }
   }, 30000);
