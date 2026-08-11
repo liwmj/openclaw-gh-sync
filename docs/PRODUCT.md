@@ -130,7 +130,7 @@ openclaw gh-sync status        # 显示配置信息、同步状态
 ### 5.4 网络故障与自愈（v0.6.14+）
 
 - **push 失败自动重试**：已 commit 未推送的提交会在网络恢复后自动补推（不再假死）
-- **超时保护**：git connect/transfer 双 30s 超时兜底，网络故障时进程自动中止、不残留
+- **超时保护**：simple-git 层 30s 无输出自动 kill 子进程（`timeout: { block: 30000 }`，实测 TCP 无响应场景 6s 级可靠中止、0 残留）+ git transfer 阶段 30s low-speed 兜底
 - **备份 push 重试**：大文件推送失败自动重试 3 次（2s/5s/10s 递增）
 - 网络故障期间插件持续运行，恢复后自动补齐
 
@@ -217,7 +217,7 @@ openclaw gh-sync restore --from-instance <旧实例名> --yes
 2. 远端已有数据 → merge / replace-local 选择
 3. 本地旧配置 → 新仓库地址重新 setup（pre-setup 备份）
 4. 断网时 push 失败 → 恢复后自动补推
-5. 网络全断 → 30s 内中止、无进程残留
+5. 网络全断 → 30s 内中止（simple-git timeout kill 子进程）、无进程残留
 6. 多实例同仓库 → 分支隔离
 7. 备份跟随 include 配置变化
 
