@@ -40,6 +40,27 @@ export function runBackupCli(
 export class BackupEngine {
   constructor(private readonly deps: BackupDeps) {}
 
+  // 备份 push 的是大文件（全量 ~68MB tar.gz），网络抖动时一次失败直接抛错体验差。
+  // 加最多 3 次重试，间隔递增（2s/5s/10s），重试仍失败才抛出。
+  private async pushWithRetry(): Promise<void> {
+    const { gitops, log } = this.deps;
+    const delays = [2000, 5000, 10000];
+    let lastErr: unknown;
+    for (let attempt = 0; attempt <= delays.length; attempt++) {
+      try {
+        await gitops.push();
+        return;
+      } catch (err) {
+        lastErr = err;
+        if (attempt < delays.length) {
+          log(`[gh-sync] backup push failed (attempt ${attempt + 1}), retrying in ${delays[attempt] / 1000}s: ${String(err)}`);
+          await new Promise((r) => setTimeout(r, delays[attempt]));
+        }
+      }
+    }
+    throw lastErr;
+  }
+
   async backupNow(spawnFn?: SpawnFn): Promise<BackupResult | null> {
     const { backupsDir, gitops, log } = this.deps;
     mkdirSync(backupsDir, { recursive: true });
@@ -64,7 +85,7 @@ export class BackupEngine {
     rmSync(tmpOut, { recursive: true, force: true });
     const uploadedTo: BackupResult["uploadedTo"] = "git";
     await gitops.commitChanged(`Backup: ${basename(dest)}`);
-    await gitops.push();
+    await this.pushWithRetry();
     await this.enforceRetention();
     log(`backup uploaded: ${dest}`);
     return { archivePath: dest, sizeBytes, uploadedTo };
@@ -83,6 +104,6 @@ export class BackupEngine {
     const toDelete = sorted.slice(retain);
     for (const f of toDelete) unlinkSync(f);
     const changed = await gitops.commitChanged(`Backup retention: removed ${toDelete.length} old archive(s)`);
-    if (changed) await gitops.push();
+    if (changed) await this.pushWithRetry();
   }
 }
