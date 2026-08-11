@@ -218,6 +218,7 @@ git config --global --unset url."https://gh-proxy.com/https://github.com/".inste
 1. 创建一个 **fine-grained token**，仅授权要同步的仓库（Contents: Read and write）
 2. 手动改 remote 为 `https://<token>@gh-proxy.com/https://github.com/<owner>/<repo>.git`（仅测试用途）
 3. 测试完成后删除该 token，并把 remote 还原为插件 setup 生成的原始地址
+4. 改完 remote 后记得同步确认：`openclaw gh-sync status` 应仍显示正常——插件读的是 `config.json` 的 `repo` 字段，与 git remote 不一致时以 config 为准，两者需保持一致
 
 > 安全提醒：任何第三方镜像都可能记录流量，涉及凭据的操作请使用低权限、可随时吊销的临时 token。
 
