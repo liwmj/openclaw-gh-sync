@@ -179,6 +179,64 @@ openclaw gh-sync restore backup-2026-08-10.tar.gz --yes
   ```
   其他设备导入：`git-crypt unlock /安全位置/gh-sync.key`
 
+## 网络受限环境使用指南（可选）
+
+部分地区（如中国大陆）访问 github.com 直连不稳定。本插件依赖 GitHub 仓库做同步，若遇到 push/pull 超时，可参考本节处理。
+
+> 本节为**可选的网络加速方案**，默认安装与使用仍走 GitHub 直连，仅在直连不可用时启用。
+
+### 判断是网络问题还是插件问题
+
+网络抖动时插件会正常打日志并自动补推（v0.6.14 起）：
+
+```bash
+openclaw gh-sync status   # 查看 lastError / lastPushAt / ahead 字段
+```
+
+- `lastError` 有内容 → 上次操作出错（多为网络）
+- `ahead > 0` 且持续不降 → 有未推送提交，网络恢复后插件会自动补推
+- 若 `lastError` 持续出现连接超时，大概率是网络层问题，可考虑镜像
+
+### 使用镜像加速（gh-proxy 等）
+
+国内常用 GitHub 加速镜像：`gh-proxy.com`、`ghproxy.com`、`ghfast.top` 等。
+
+```bash
+# 全局配置：把所有 https://github.com/ 请求改走镜像
+git config --global url."https://gh-proxy.com/https://github.com/".insteadOf "https://github.com/"
+
+# 还原
+git config --global --unset url."https://gh-proxy.com/https://github.com/".insteadOf
+```
+
+> ⚠️ **重要差异（实测）**：`insteadOf` 对**标准 URL**（`https://github.com/...`）生效，但对**内嵌 token 的 remote URL**（本插件 `setup` 生成的 `https://x-access-token:xxx@github.com/...` 格式）**不生效**。若本插件仍走直连，请改用下面的低权限 token 方案。
+
+### 低权限 token + 镜像（推荐用于 push）
+
+插件 remote 内嵌 token 走镜像会把 token 暴露给镜像服务商，安全风险高。如需 push 走镜像：
+
+1. 创建一个 **fine-grained token**，仅授权要同步的仓库（Contents: Read and write）
+2. 手动改 remote 为 `https://<token>@gh-proxy.com/https://github.com/<owner>/<repo>.git`（仅测试用途）
+3. 测试完成后删除该 token，并把 remote 还原为插件 setup 生成的原始地址
+
+> 安全提醒：任何第三方镜像都可能记录流量，涉及凭据的操作请使用低权限、可随时吊销的临时 token。
+
+### 验证镜像是否生效
+
+```bash
+# 查看当前 url 重写规则
+git config --global --get-regexp "url\."
+
+# 实测连接走哪个主机（gh-proxy.com=生效，github.com=未生效）
+GIT_CURL_VERBOSE=1 git ls-remote <repo-url> 2>&1 | grep "Connected to"
+```
+
+### 测试范围提醒
+
+配置镜像后请验证**全链路**，不能只测 clone：`clone / pull / push / backup 上传` 都要跑一遍。公共镜像常只对下载友好，push 可能失败或超时。
+
+> 镜像稳定性依赖第三方服务，可能失效，启用后请自行验证并承担相应风险。
+
 ## 常见问题
 
 | 现象 | 解决方法 |
