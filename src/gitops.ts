@@ -122,7 +122,8 @@ export class GitOps {
     const ignorePath = join(this.syncDir, ".gitignore");
     fsWriteFileSync(ignorePath, [
       ".git-credentials",
-      "backups/",
+      "backups/*",
+      "!backups/*.tar.gz",
       "*.sqlite",
       "*.sqlite-*",
       "*.jsonl",

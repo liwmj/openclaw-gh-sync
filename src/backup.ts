@@ -1,5 +1,6 @@
-import { existsSync, mkdirSync, readdirSync, statSync, unlinkSync } from "node:fs";
-import { join } from "node:path";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, unlinkSync } from "node:fs";
+import { basename, join } from "node:path";
+import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import type { BackupResult } from "./types.js";
 
@@ -41,15 +42,31 @@ export class BackupEngine {
   async backupNow(spawnFn?: SpawnFn): Promise<BackupResult | null> {
     const { backupsDir, gitops, log } = this.deps;
     mkdirSync(backupsDir, { recursive: true });
-    const archive = runBackupCli(this.deps.stateDir, backupsDir, spawnFn);
-    if (!existsSync(archive)) return null;
+    // Bug D 修复：openclaw backup 的源路径是 stateDir（如 ~/.openclaw），
+    // 输出目录不能在源路径内部，否则 openclaw 拒绝「备份输出到源路径内部」。
+    // 先输出到系统临时目录（stateDir 外部），成功后再移动进 backupsDir。
+    const tmpOut = mkdtempSync(join(tmpdir(), "gh-sync-backup-"));
+    let archive: string;
+    try {
+      archive = runBackupCli(this.deps.stateDir, tmpOut, spawnFn);
+    } catch (err) {
+      rmSync(tmpOut, { recursive: true, force: true });
+      throw err;
+    }
+    if (!existsSync(archive)) {
+      rmSync(tmpOut, { recursive: true, force: true });
+      return null;
+    }
     const sizeBytes = statSync(archive).size;
+    const dest = join(backupsDir, basename(archive));
+    copyFileSync(archive, dest);
+    rmSync(tmpOut, { recursive: true, force: true });
     const uploadedTo: BackupResult["uploadedTo"] = "git";
-    await gitops.commitChanged(`Backup: ${archive.split(/[\\/]/).pop() ?? archive}`);
+    await gitops.commitChanged(`Backup: ${basename(dest)}`);
     await gitops.push();
     await this.enforceRetention();
-    log(`backup uploaded: ${archive}`);
-    return { archivePath: archive, sizeBytes, uploadedTo };
+    log(`backup uploaded: ${dest}`);
+    return { archivePath: dest, sizeBytes, uploadedTo };
   }
 
   async enforceRetention(): Promise<void> {
