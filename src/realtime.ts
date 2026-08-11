@@ -7,7 +7,7 @@ import { GitOps } from "./gitops.js";
 import { FileWatcher } from "./watcher.js";
 import { Poller } from "./poller.js";
 import { rmSync, existsSync, unlinkSync } from "node:fs";
-import type { MirrorEntry } from "./types.js";
+import type { MirrorEntry, PullOutcome } from "./types.js";
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -85,7 +85,9 @@ export class SyncEngine {
         }, config.pushDebounceMs);
         this.watcher.start();
 
-        this.poller = new Poller(config.pollIntervalSec * 1000, () => this.pullNow());
+        this.poller = new Poller(config.pollIntervalSec * 1000, async () => {
+          await this.pullNow();
+        });
         this.poller.start();
       } catch (err) {
         this.started = false;
@@ -173,12 +175,15 @@ export class SyncEngine {
     }
   }
 
-  async pullNow(): Promise<void> {
-    if (this.isSyncing) return;
+  async pullNow(): Promise<PullOutcome> {
+    if (this.isSyncing) return { status: "up-to-date" };
     this.isSyncing = true;
     try {
       const { gitops, syncDir, stateDir, config } = this.deps;
       const outcome = await withTimeout(gitops.pull(), 60_000);
+      if (outcome.status === "ok" && outcome.conflictCopies && outcome.conflictCopies.length > 0) {
+        this.deps.log(`[gh-sync] pull conflict: local changes preserved as ${outcome.conflictCopies.join(", ")}`);
+      }
       if (outcome.status === "ok" && outcome.changedFiles.length > 0) {
         const { stateDir: sd, syncDir: syD, config: cfg } = this.deps;
         const entries = buildMirrorEntries(sd, syD, cfg.include);
@@ -196,8 +201,10 @@ export class SyncEngine {
         copyMirrorToSources(entries, excluded, deleted);
         this.lastPullAt = new Date().toISOString();
       }
+      return outcome;
     } catch (err) {
       this.deps.onError(err);
+      return { status: "conflict" };
     } finally {
       this.releaseSync();
     }

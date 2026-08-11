@@ -156,7 +156,10 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
     },
     async pullNow() {
       await ensureReady();
-      await engine!.pullNow();
+      const outcome = await engine!.pullNow();
+      if (outcome.status === "ok" && outcome.conflictCopies && outcome.conflictCopies.length > 0) {
+        return `pull complete (conflict: local changes preserved as ${outcome.conflictCopies.join(", ")})`;
+      }
       return "pull complete";
     },
     async conflicts() {

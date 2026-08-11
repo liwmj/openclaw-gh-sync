@@ -245,5 +245,5 @@ GIT_CURL_VERBOSE=1 git ls-remote <repo-url> 2>&1 | grep "Connected to"
 | 提示 `not configured` | 运行 `openclaw gh-sync setup` 完成初始化配置 |
 | 提示 `repo must be an https GitHub URL` | 配置中的仓库地址不是 HTTPS 格式，改为 `https://github.com/...` |
 | 空仓库 / 远程分支不存在 | 正常运行即可，首次推送会自动创建分支和目录结构 |
-| 出现合并冲突 | 运行 `openclaw gh-sync conflicts` 查看冲突文件。冲突文件会保留为 `.ours.<时间戳>` 和 `.theirs.<时间戳>` 副本，不会丢失数据 |
+| 出现合并冲突 | pull 时若本地有未推送修改且远端同文件已变更，插件自动解决：主文件取远端版本，本地版本保存为 `<文件名>.local.<时间戳>` 副本（不会丢失数据），并在 pull 日志中提示冲突及副本位置。运行 `openclaw gh-sync conflicts` 可查看当前存在的冲突文件 |
 | 找不到 git-crypt | 安装 git-crypt（macOS: `brew install git-crypt`，Ubuntu: `sudo apt install git-crypt`），或在配置中将 `gitCryptEnabled` 设为 `false` |

@@ -26,7 +26,7 @@ export interface AheadBehind {
 
 export type PullOutcome =
   | { status: "up-to-date" }
-  | { status: "ok"; changedFiles: string[] }
+  | { status: "ok"; changedFiles: string[]; conflictCopies?: string[] }
   | { status: "conflict" }
   | { status: "diverged" };
 

@@ -165,12 +165,12 @@ export class GitOps {
         await this.git.merge(["--ff-only", `origin/${this.branch}`]);
         return { status: "ok", changedFiles };
       } catch {
-        await this.saveLocalConflictFiles(changedFiles, Date.now().toString(), "local");
+        const conflictCopies = await this.saveLocalConflictFiles(changedFiles, Date.now().toString(), "local");
         await this.forceAcceptRemote(this.branch);
-        return { status: "ok", changedFiles };
+        return { status: "ok", changedFiles, conflictCopies };
       }
     }
-    await this.saveLocalConflictFiles(changedFiles, Date.now().toString(), "local");
+    const conflictCopies = await this.saveLocalConflictFiles(changedFiles, Date.now().toString(), "local");
     const result = await this.mergeRemote("theirs");
     if (result === "conflict") {
       await this.acceptRemoteForConflicts();
@@ -179,7 +179,7 @@ export class GitOps {
         await this.git.commit("Resolve conflicts: accept remote");
       }
     }
-    return { status: "ok", changedFiles };
+    return { status: "ok", changedFiles, conflictCopies };
   }
 
   async forceAcceptRemote(branch: string): Promise<void> {
