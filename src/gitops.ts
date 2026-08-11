@@ -12,7 +12,14 @@ export class GitOps {
     private readonly branch: string,
     private readonly pat: string | null,
   ) {
-    this.git = simpleGit(syncDir).env({ LANG: "C", LC_ALL: "C", LC_MESSAGES: "C" });
+    this.git = simpleGit(syncDir).env({
+      LANG: "C",
+      LC_ALL: "C",
+      LC_MESSAGES: "C",
+      // Bug B 修复：http(s) 连接无数据传输超 30s 时 git 自身中止，防止超时后子进程残留累积
+      GIT_HTTP_LOW_SPEED_LIMIT: "1",
+      GIT_HTTP_LOW_SPEED_TIME: "30",
+    });
   }
 
   async initRepo(): Promise<void> {

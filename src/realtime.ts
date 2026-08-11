@@ -135,7 +135,16 @@ export class SyncEngine {
     try {
       this.deps.log("[gh-sync] pushing...");
       const committed = await withTimeout(this.deps.gitops.commitChanged(`Auto-sync: ${new Date().toISOString()}`), 30_000);
-      if (committed) {
+      // Bug A 修复：即使没有新变更，也可能有上次 push 失败遗留的已 commit 未 push 提交，必须补推
+      let ahead = committed ? 1 : 0;
+      if (!committed) {
+        try {
+          ahead = (await this.deps.gitops.aheadBehind()).ahead;
+        } catch {
+          ahead = 0;
+        }
+      }
+      if (committed || ahead > 0) {
         await withTimeout(this.deps.gitops.push(), 60_000);
         this.lastPushAt = new Date().toISOString();
         this.deps.log("[gh-sync] push completed");
