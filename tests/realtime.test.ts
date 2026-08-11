@@ -121,7 +121,13 @@ describe("SyncEngine", () => {
     await expect.poll(async () => (await ops.aheadBehind()).behind, { timeout: 10000, interval: 100 }).toBe(0);
 
     rmSync(join(stateDir, "workspace", "a.txt"));
-    await expect.poll(() => errors.length, { timeout: 10000, interval: 100 }).toBeGreaterThan(0);
+    // 删除文件是正常同步操作：镜像副本被移除、变更推送到远端，不触发 onError 也不崩溃
+    await expect.poll(async () => {
+      const mirrorFile = join(syncDir, "openclaw", "workspace", "a.txt");
+      const ab = await ops.aheadBehind();
+      return !existsSync(mirrorFile) && ab.ahead === 0 && ab.behind === 0;
+    }, { timeout: 10000, interval: 100 }).toBe(true);
+    expect(errors).toHaveLength(0);
 
     await engine.stop();
     cleanup(bareDir, workDir);

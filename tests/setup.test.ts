@@ -40,6 +40,7 @@ describe("runSetupWizard", () => {
         stateDir: "/state",
         syncDir: "/state/gh-sync",
         configService: {
+          load: () => (overrides.saved !== undefined ? overrides.saved : null),
           validate: (raw: unknown) => {
             if (typeof raw !== "object" || raw === null) return { ok: false, errors: ["config is not an object"] };
             const cfg = raw as Partial<SyncConfig>;

@@ -12,7 +12,7 @@ export class GitOps {
     private readonly branch: string,
     private readonly pat: string | null,
   ) {
-    this.git = simpleGit(syncDir);
+    this.git = simpleGit(syncDir).env({ LANG: "C", LC_ALL: "C", LC_MESSAGES: "C" });
   }
 
   async initRepo(): Promise<void> {
