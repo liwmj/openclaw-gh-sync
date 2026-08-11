@@ -269,12 +269,16 @@ export function registerCommands(program: CommanderProgram, rt: Runtime): void {
     .description("Restore from a backup snapshot")
     .option("--dry-run", "Preview what the restore would change")
     .option("--yes", "Apply the restore without confirmation")
-    .action((...args: unknown[]) => {
+    .action(async (...args: unknown[]) => {
       const snapshot = typeof args[0] === "string" ? args[0] : undefined;
-      const opts = (args[args.length - 1] as { dryRun?: boolean; yes?: boolean } | undefined) ?? {};
-      void (async () => {
+      // Commander 回调参数为 (snapshot, options, command)：options 在倒数第二个，不是最后一个（最后一个是 command 对象）
+      const opts = (args[1] ?? {}) as { dryRun?: boolean; yes?: boolean };
+      try {
         console.log(await rt.restore({ snapshot, dryRun: opts.dryRun, yes: opts.yes }));
-      })();
+      } catch (e) {
+        console.error(String(e));
+        process.exitCode = 1;
+      }
     });
 
   ghSync.command("conflicts").description("List active merge conflicts").action(async () => {

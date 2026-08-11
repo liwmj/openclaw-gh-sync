@@ -41,7 +41,16 @@ export function createCustomArchive(
   const name = `gh-sync-backup-${new Date().toISOString().replace(/[:.]/g, "-")}.tar.gz`;
   const archive = join(outputDir, name);
   const items = [...new Set([...include, CONFIG_FILE])].filter((rel) => existsSync(join(stateDir, rel)));
-  const res = spawnFn("tar", ["-czf", archive, "-C", stateDir, ...items]);
+  // 排除冗余内容：workspace 内的 .git 元数据、node_modules 等不应进备份
+  const excludes = [
+    "--exclude=*/.git",
+    "--exclude=*/.git/*",
+    "--exclude=*/node_modules",
+    "--exclude=*/node_modules/*",
+    "--exclude=*.log",
+    "--exclude=*.tmp",
+  ];
+  const res = spawnFn("tar", ["-czf", archive, ...excludes, "-C", stateDir, ...items]);
   if (res.status !== 0) throw new Error(`backup archive failed: ${res.stderr}`);
   if (!existsSync(archive)) throw new Error("backup archive was not created");
   return archive;
