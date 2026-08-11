@@ -31,4 +31,4 @@ mkdir -p "$staging/openclaw/workspace"
 printf 'restored' > "$staging/openclaw/workspace/restored.txt"
 tar -czf "$archive" -C "$staging" .
 rm -rf "$staging"
-echo "{\"ok\":true,\"archive\":\"$archive\"}"
+echo "{\"ok\":true,\"archivePath\":\"$archive\"}"
