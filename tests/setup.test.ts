@@ -82,7 +82,7 @@ describe("runSetupWizard", () => {
 
   it("validates config before saving and refuses an invalid repo", async () => {
     const { io, saved, written } = makeIo();
-    await expect(runSetupWizard({ prompts: makePrompts(["https://github.com/", "pat", "box"]), io })).rejects.toThrow(/setup aborted: invalid config/);
+    await expect(runSetupWizard({ prompts: makePrompts(["https://github.com/", "pat", "box", "degraded"]), io })).rejects.toThrow(/setup aborted: invalid config/);
     expect(saved).toHaveLength(0);
     expect(written).toHaveLength(0);
   });

@@ -51,12 +51,16 @@ export async function runSetupWizard(opts: {
     throw new Error(`setup aborted: ${what} cancelled`);
   };
 
+  // 非 TTY/管道调用时 clack 的 text()/select()/confirm() 可能返回 undefined（isCancel 不拦截），
+  // 统一兜底：undefined 视为取消，避免把字面量 "undefined" 当合法输入继续走流程。
+  const cancelled = (v: unknown): boolean => isCancel(v) || v === undefined;
+
   const repoRes = await prompts.text({ message: "GitHub repository (username/repo or https://github.com/username/repo)" });
-  if (isCancel(repoRes)) abort("repo");
+  if (cancelled(repoRes)) abort("repo");
   const patRes = await prompts.text({ message: "GitHub Personal Access Token (Fine-grained: Contents=Read+Write, or Classic: repo scope)" });
-  if (isCancel(patRes)) abort("PAT");
+  if (cancelled(patRes)) abort("PAT");
   const instanceNameRawRes = await prompts.text({ message: "Instance name" });
-  if (isCancel(instanceNameRawRes)) abort("instance name");
+  if (cancelled(instanceNameRawRes)) abort("instance name");
   const pat = String(patRes);
   const instanceNameRaw = String(instanceNameRawRes);
   let rawRepo = String(repoRes);
@@ -74,7 +78,7 @@ export async function runSetupWizard(opts: {
     message: "Enable git-crypt encryption for sensitive files?",
     initialValue: false,
   });
-  const wantsGitCrypt = !isCancel(gitCryptRes) && gitCryptRes === true;
+  const wantsGitCrypt = !cancelled(gitCryptRes) && gitCryptRes === true;
 
   const plan = planForSetup({
     instanceNameRaw,
@@ -95,7 +99,7 @@ export async function runSetupWizard(opts: {
         { value: "replace-local", label: hasRemote ? "Replace local — overwrite local with remote (use when migrating)" : "Start fresh — back up old data and begin clean on new repository" },
       ],
     });
-    if (isCancel(strategyRes)) abort("strategy selection");
+    if (cancelled(strategyRes)) abort("strategy selection");
     syncStrategy = strategyRes as SyncConfig["syncStrategy"];
   }
 
@@ -110,7 +114,7 @@ export async function runSetupWizard(opts: {
         { value: "abort", label: "Abort setup" },
       ],
     });
-    if (isCancel(choiceRes)) abort("git-crypt choice");
+    if (cancelled(choiceRes)) abort("git-crypt choice");
     const choice = choiceRes as "init" | "degraded" | "abort";
     if (choice === "abort") throw new Error("setup aborted: git-crypt required");
     action = choice === "init" ? "init" : "none";
