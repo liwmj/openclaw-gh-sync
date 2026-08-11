@@ -12,7 +12,10 @@ export class GitOps {
     private readonly branch: string,
     private readonly pat: string | null,
   ) {
-    this.git = simpleGit({ baseDir: syncDir, timeout: { block: 30_000 } }).env({
+    this.git = simpleGit({ baseDir: syncDir, timeout: { block: 30_000 }, unsafe: { allowUnsafeEditor: true } }).env({
+      // 必须展开 process.env 保留 HOME/PATH 等：只覆盖 LANG/LC_ALL，
+      // 否则子进程环境被替换后 git 读不到 ~/.gitconfig 的 user.name/email → commit 报 Author identity unknown
+      ...process.env,
       LANG: "C",
       LC_ALL: "C",
       LC_MESSAGES: "C",
