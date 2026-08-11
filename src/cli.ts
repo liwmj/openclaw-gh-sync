@@ -266,15 +266,16 @@ export function registerCommands(program: CommanderProgram, rt: Runtime): void {
   });
 
   ghSync.command("restore [snapshot]")
-    .description("Restore from a backup snapshot")
+    .description("Restore from a backup snapshot or another instance")
     .option("--dry-run", "Preview what the restore would change")
     .option("--yes", "Apply the restore without confirmation")
+    .option("--from-instance <name>", "Restore from another instance's latest backup")
     .action(async (...args: unknown[]) => {
       const snapshot = typeof args[0] === "string" ? args[0] : undefined;
       // Commander 回调参数为 (snapshot, options, command)：options 在倒数第二个，不是最后一个（最后一个是 command 对象）
-      const opts = (args[1] ?? {}) as { dryRun?: boolean; yes?: boolean };
+      const opts = (args[1] ?? {}) as { dryRun?: boolean; yes?: boolean; fromInstance?: string };
       try {
-        console.log(await rt.restore({ snapshot, dryRun: opts.dryRun, yes: opts.yes }));
+        console.log(await rt.restore({ snapshot, fromInstance: opts.fromInstance, dryRun: opts.dryRun, yes: opts.yes }));
       } catch (e) {
         console.error(String(e));
         process.exitCode = 1;
