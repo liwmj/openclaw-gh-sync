@@ -4,15 +4,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createPlugin, type MinimalApi } from "../src/index.js";
 
+// commander-like mock: program.command("gh-sync") -> ghSync; ghSync.command("status") records subcommand
 function makeProgram() {
   const root: { name: string; subs: string[] }[] = [];
   const find = (name: string) => root.find((n) => n.name === name);
   const ensure = (name: string) => {
     let n = find(name);
-    if (!n) {
-      n = { name, subs: [] };
-      root.push(n);
-    }
+    if (!n) { n = { name, subs: [] }; root.push(n); }
     return n;
   };
   const chain = (name: string) => ({
@@ -55,15 +53,15 @@ describe("plugin entry", () => {
     process.env.OPENCLAW_STATE_DIR = mkdtempSync(join(tmpdir(), "idx-"));
     createPlugin(api);
     delete process.env.OPENCLAW_STATE_DIR;
+
     expect(handlers.has("gateway_start")).toBe(true);
     expect(handlers.has("gateway_stop")).toBe(true);
     expect(api.registerCli).toHaveBeenCalled();
     await expect(api.registerCli.mock.results[0].value).resolves.toBeUndefined();
+
     const ghSyncNode = program.root.find((n) => n.name === "gh-sync");
     expect(ghSyncNode).toBeTruthy();
-    expect(ghSyncNode!.subs).toEqual(
-      expect.arrayContaining(["status", "push", "pull", "sync", "backup", "conflicts", "setup", "reset"]),
-    );
+    expect(ghSyncNode!.subs).toEqual(expect.arrayContaining(["status", "push", "pull", "sync", "backup", "conflicts", "setup", "reset"]));
   });
 
   it("createPlugin does not throw with minimal api", () => {
