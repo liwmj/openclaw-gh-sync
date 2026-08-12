@@ -29,6 +29,7 @@ export const DEFAULT_CONFIG: SyncConfig = {
   backupRetain: 10,
   gitCryptEnabled: false,
   syncStrategy: "merge",
+  gitTimeoutMs: 30_000,
 };
 
 const NAME_RE = /[^a-z0-9-]/g;
@@ -71,6 +72,7 @@ export class ConfigService {
     if (typeof cfg.pollIntervalSec !== "number" || cfg.pollIntervalSec < 5) errors.push("pollIntervalSec >= 5");
     if (typeof cfg.backupIntervalH !== "number" || cfg.backupIntervalH < 1) errors.push("backupIntervalH >= 1");
     if (cfg.syncStrategy !== undefined && cfg.syncStrategy !== "merge" && cfg.syncStrategy !== "replace-local") errors.push("syncStrategy must be merge or replace-local");
+    if (cfg.gitTimeoutMs !== undefined && (typeof cfg.gitTimeoutMs !== "number" || cfg.gitTimeoutMs < 5_000)) errors.push("gitTimeoutMs >= 5000");
     return { ok: errors.length === 0, errors };
   }
 }

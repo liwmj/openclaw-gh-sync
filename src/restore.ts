@@ -9,11 +9,12 @@ export interface RestoreDeps {
   stateDir: string;
   gitops: {
     ensureBranch(name: string): Promise<void>;
-    fetchBranch(branch: string): Promise<boolean>;
+    fetchBranch(branch: string, timeoutMs?: number): Promise<boolean>;
     commitChanged(message: string): Promise<boolean>;
     pushCurrent(): Promise<void>;
   };
   ownBranch: string;
+  fetchTimeoutMs?: number;
   log: (m: string) => void;
 }
 
@@ -42,7 +43,9 @@ export class RestoreEngine {
     let archive: string | null = opts.snapshot ? join(syncDir, "backups", opts.snapshot) : latestLocal(join(syncDir, "backups"));
     if (opts.fromInstance) {
       const branch = `instances/${opts.fromInstance}`;
-      if (!(await gitops.fetchBranch(branch))) {
+      // 慢网络下跨实例 fetch 可超 30s（实测 ~170s）：用更宽松的超时，避免误判网络错误
+      const fetchTimeoutMs = this.deps.fetchTimeoutMs ?? Math.max((this.deps as { gitTimeoutMs?: number }).gitTimeoutMs ?? 30_000, 180_000);
+      if (!(await gitops.fetchBranch(branch, fetchTimeoutMs))) {
         throw new Error(`no remote instance: ${opts.fromInstance}`);
       }
       await gitops.ensureBranch(branch);

@@ -11,8 +11,13 @@ export class GitOps {
     private readonly repoUrl: string,
     private readonly branch: string,
     private readonly pat: string | null,
+    private readonly timeoutMs = 30_000,
   ) {
-    this.git = simpleGit({ baseDir: syncDir, timeout: { block: 30_000 }, unsafe: { allowUnsafeEditor: true } }).env({
+    this.git = this.makeGit(this.timeoutMs);
+  }
+
+  private makeGit(timeoutMs: number) {
+    return simpleGit({ baseDir: this.syncDir, timeout: { block: timeoutMs }, unsafe: { allowUnsafeEditor: true } }).env({
       // 必须展开 process.env 保留 HOME/PATH 等：只覆盖 LANG/LC_ALL，
       // 否则子进程环境被替换后 git 读不到 ~/.gitconfig 的 user.name/email → commit 报 Author identity unknown
       ...process.env,
@@ -91,9 +96,11 @@ export class GitOps {
     }
   }
 
-  async fetchBranch(branch: string): Promise<boolean> {
+  async fetchBranch(branch: string, timeoutMs?: number): Promise<boolean> {
+    // 慢网络下 restore 跨实例 fetch 可传更大超时（默认 block 30s 对 170s 级 fetch 太紧）
+    const git = timeoutMs && timeoutMs !== this.timeoutMs ? this.makeGit(timeoutMs) : this.git;
     try {
-      await this.git.fetch("origin", branch);
+      await git.fetch("origin", branch);
     } catch {
       if (!(await this.remoteRefExists(branch))) return false;
       throw new Error(`failed to fetch branch ${branch}: network or auth error`);
