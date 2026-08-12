@@ -73,6 +73,8 @@ export class ConfigService {
     if (typeof cfg.backupIntervalH !== "number" || cfg.backupIntervalH < 1) errors.push("backupIntervalH >= 1");
     if (cfg.syncStrategy !== undefined && cfg.syncStrategy !== "merge" && cfg.syncStrategy !== "replace-local") errors.push("syncStrategy must be merge or replace-local");
     if (cfg.gitTimeoutMs !== undefined && (typeof cfg.gitTimeoutMs !== "number" || cfg.gitTimeoutMs < 5_000)) errors.push("gitTimeoutMs >= 5000");
+    if (cfg.gitignoreExtras !== undefined && (!Array.isArray(cfg.gitignoreExtras) || cfg.gitignoreExtras.some((x) => typeof x !== "string"))) errors.push("gitignoreExtras must be string[]");
+    if (cfg.forceInclude !== undefined && (!Array.isArray(cfg.forceInclude) || cfg.forceInclude.some((x) => typeof x !== "string"))) errors.push("forceInclude must be string[]");
     return { ok: errors.length === 0, errors };
   }
 }

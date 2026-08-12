@@ -38,7 +38,7 @@ export interface EngineStatus {
 }
 
 export async function createGitOps(config: SyncConfig, syncDir: string, pat: string | null): Promise<GitOps> {
-  const ops = new GitOps(syncDir, config.repo, config.branch, pat, config.gitTimeoutMs ?? 30_000);
+  const ops = new GitOps(syncDir, config.repo, config.branch, pat, config.gitTimeoutMs ?? 30_000, config.gitignoreExtras ?? [], config.forceInclude ?? []);
   await ops.initRepo();
   return ops;
 }

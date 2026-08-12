@@ -11,7 +11,7 @@ describe("openclaw.plugin.json", () => {
     const fields: (keyof SyncConfig)[] = [
       "repo", "branch", "instanceName", "include", "exclude",
       "pushDebounceMs", "pollIntervalSec", "backupIntervalH", "backupRetain", "gitCryptEnabled",
-      "syncStrategy", "gitTimeoutMs",
+      "syncStrategy", "gitTimeoutMs", "gitignoreExtras", "forceInclude",
     ];
     const expected = [...fields].sort();
     const actual = Object.keys(manifest.configSchema.properties).sort();

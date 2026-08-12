@@ -11,6 +11,8 @@ export interface SyncConfig {
   gitCryptEnabled: boolean;
   syncStrategy: "merge" | "replace-local";
   gitTimeoutMs?: number;
+  gitignoreExtras?: string[];
+  forceInclude?: string[];
 }
 
 export interface InstanceMeta {

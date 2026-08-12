@@ -134,9 +134,14 @@ openclaw gh-sync restore backup-2026-08-10.tar.gz --yes
   "pollIntervalSec": 60,                       // 远程拉取间隔（秒），最小 5 秒
   "backupIntervalH": 6,                        // 定时备份间隔（小时），最小 1 小时
   "backupRetain": 7,                           // 保留最近多少个备份存档（超出自动删除）
-  "gitCryptEnabled": false                     // 是否启用 git-crypt 加密（默认关闭）
+  "gitCryptEnabled": false,                     // 是否启用 git-crypt 加密（默认关闭）
+  "gitTimeoutMs": 30000,                        // git 操作超时（毫秒）；慢网络可调大，restore 跨实例 fetch 自动放宽至 max(gitTimeoutMs, 180000)
+  "gitignoreExtras": [],                        // 追加到 .gitignore 的忽略规则，如 ["*.tmp"]
+  "forceInclude": []                            // 强制放行同步的 glob，如 ["**/*.jsonl"] 可同步会话文件
 }
 ```
+
+**`.gitignore` 管理（v0.6.16+）**：插件每次启动时自动重写 `.gitignore`，采用 managed 区块（`# ===== gh-sync managed start/end =====`）方式：默认安全规则（凭据、backups 临时文件、sqlite、jsonl、冲突副本）+ 你配置的 `gitignoreExtras`/`forceInclude`。**managed 区块外你手动添加的规则不会被覆盖**。不配置新字段时行为与旧版完全一致。
 
 ## 为什么不同步会话记录
 
@@ -146,7 +151,9 @@ openclaw gh-sync restore backup-2026-08-10.tar.gz --yes
 2. **隐私安全**：对话记录含敏感内容，GitHub 明文存储风险高
 3. **记忆已覆盖**：AI 的结构化记忆（`MEMORY.md`）会自动摘要沉淀，跨设备同步后行为一致
 
-如需同步会话，在 `config.json` 的 `include` 中加入对应路径，并编辑 `.gitignore` 移除 `*.jsonl` 排除项。
+如需同步会话，在 `config.json` 中配置 `forceInclude: ["**/*.jsonl"]`（自动生成 `!` 反选规则，覆盖默认忽略），并按需把会话路径加入 `include`。注意数据膨胀与隐私风险自担。
+
+> 旧版提示“编辑 .gitignore 移除 `*.jsonl`”的方式在 v0.6.16+ 已废弃：插件启动时会重写 managed 区块，手改会被覆盖；请改用 `forceInclude` 配置。
 
 ## 仓库结构
 

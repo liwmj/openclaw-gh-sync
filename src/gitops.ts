@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, writeFileSync as fsWriteFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync as fsWriteFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { simpleGit, type StatusResult } from "simple-git";
 import type { AheadBehind, PullOutcome } from "./types.js";
@@ -12,6 +12,8 @@ export class GitOps {
     private readonly branch: string,
     private readonly pat: string | null,
     private readonly timeoutMs = 30_000,
+    private readonly gitignoreExtras: string[] = [],
+    private readonly forceInclude: string[] = [],
   ) {
     this.git = this.makeGit(this.timeoutMs);
   }
@@ -130,7 +132,25 @@ export class GitOps {
 
   private writeGitignore(): void {
     const ignorePath = join(this.syncDir, ".gitignore");
-    fsWriteFileSync(ignorePath, [
+    const managedStart = "# ===== gh-sync managed start =====";
+    const managedEnd = "# ===== gh-sync managed end =====";
+
+    // 保留 managed 区块外的用户自定义规则（升级/重写时不覆盖用户手动配置）
+    let userRules: string[] = [];
+    if (existsSync(ignorePath)) {
+      const existing = readFileSync(ignorePath, "utf8").split(/\r?\n/);
+      let inManaged = false;
+      for (const line of existing) {
+        const trimmed = line.trim();
+        if (trimmed === managedStart) { inManaged = true; continue; }
+        if (trimmed === managedEnd) { inManaged = false; continue; }
+        if (!inManaged && trimmed !== "") userRules.push(line);
+      }
+    }
+
+    // managed 区块：默认安全规则 + 用户追加忽略 + 用户强制放行（! 反选，置于忽略规则之后才生效）
+    const managedRules = [
+      managedStart,
       ".git-credentials",
       "backups/*",
       "!backups/*.tar.gz",
@@ -140,8 +160,11 @@ export class GitOps {
       "*.jsonl.*",
       ".local.*",
       ".theirs.*",
-      "",
-    ].join("\n"));
+      ...this.gitignoreExtras,
+      ...this.forceInclude.map((p) => `!${p}`),
+      managedEnd,
+    ];
+    fsWriteFileSync(ignorePath, [...userRules, ...managedRules, ""].join("\n"));
   }
 
   async statusRaw(): Promise<StatusResult> {

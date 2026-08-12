@@ -70,6 +70,20 @@
         "type": "number",
         "minimum": 5000,
         "description": "Git operation block timeout (ms), default 30000. Raise for slow networks, restore fetch auto-relaxes"
+      },
+      "gitignoreExtras": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Additional .gitignore patterns appended to the managed block (e.g. *.tmp)"
+      },
+      "forceInclude": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Glob patterns force-included into git sync (generated as ! negations, override default ignores e.g. **/*.jsonl)"
       }
     },
     "additionalProperties": false
