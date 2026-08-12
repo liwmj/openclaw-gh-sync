@@ -26,7 +26,7 @@ export const DEFAULT_CONFIG: SyncConfig = {
   pushDebounceMs: 2000,
   pollIntervalSec: 60,
   backupIntervalH: 6,
-  backupRetain: 10,
+  backupRetain: 6,
   gitCryptEnabled: false,
   syncStrategy: "merge",
   gitTimeoutMs: 30_000,

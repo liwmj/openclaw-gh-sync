@@ -109,3 +109,34 @@ describe(".gitignore managed block", () => {
     }
   });
 });
+
+describe(".gitignore conflict sidecar rules", () => {
+  it("conflict sidecar files (all five naming patterns) are ignored", async () => {
+    const { dir, ops, bareDir } = makeOps();
+    try {
+      await ops.initRepo();
+      const content = gitignoreOf(dir);
+      for (const pat of ["*.conflict.*", "*.local-conflict.*", "*.peer-conflict.*", "*.local.*", "*.theirs.*"]) {
+        expect(content).toContain(pat);
+      }
+      // 实际验证 git 忽略生效
+      const { execFileSync } = await import("node:child_process");
+      writeFileSync(join(dir, "f.conflict.1789"), "x");
+      writeFileSync(join(dir, "f.local-conflict.1789"), "x");
+      writeFileSync(join(dir, "f.peer-conflict.1789"), "x");
+      writeFileSync(join(dir, "f.local.1789"), "x");
+      writeFileSync(join(dir, "f.theirs.1789"), "x");
+      writeFileSync(join(dir, "normal.txt"), "x");
+      execFileSync("git", ["-C", dir, "add", "-A"], { stdio: "ignore" });
+      const tracked = execFileSync("git", ["-C", dir, "ls-files"], { encoding: "utf8" });
+      expect(tracked).toContain("normal.txt");
+      expect(tracked).not.toContain("f.conflict.");
+      expect(tracked).not.toContain("f.local-conflict.");
+      expect(tracked).not.toContain("f.peer-conflict.");
+      expect(tracked).not.toContain("f.local.");
+      expect(tracked).not.toContain("f.theirs.");
+    } finally {
+      cleanup(bareDir, dir);
+    }
+  });
+});

@@ -73,7 +73,7 @@ openclaw gh-sync status        # 显示配置信息、同步状态
 | `pushDebounceMs` | `2000` | 本地变更推送的防抖窗口（毫秒） |
 | `pollIntervalSec` | `60` | 远端变更轮询间隔（秒，≥5） |
 | `backupIntervalH` | `6` | 定时备份间隔（小时，≥1） |
-| `backupRetain` | `10` | 备份存档保留数量 |
+| `backupRetain` | `6` | 备份存档保留数量 |
 | `gitCryptEnabled` | `false` | 是否启用 git-crypt 加密敏感路径 |
 | `syncStrategy` | `merge` | 首次/变更同步策略：`merge` 或 `replace-local` |
 | `gitTimeoutMs` | `30000` | git 操作 block 超时（毫秒，≥5000）；慢网络可调大，restore 跨实例 fetch 自动放宽至 max(gitTimeoutMs, 180000) |
@@ -83,7 +83,7 @@ openclaw gh-sync status        # 显示配置信息、同步状态
 **备份内容规则（v0.6.14+）**：备份 = `include` 配置的目录 + `openclaw.json`（配置文件本身始终包含）。同步什么就备份什么。
 
 **`.gitignore` 管理机制（v0.6.16+）**：插件在每次启动（`initRepo`）时重写 `.gitignore`，采用 managed 区块（`# ===== gh-sync managed start/end =====`）方式：
-- 默认安全规则：`.git-credentials`、`backups/*`（放行 `*.tar.gz` 供跨实例恢复）、`*.sqlite`、`*.jsonl`、`.local.*`/`.theirs.*` 冲突副本
+- 默认安全规则：`.git-credentials`、`backups/*`（放行 `*.tar.gz` 供跨实例恢复）、`*.sqlite`、`*.jsonl`、冲突副件（`*.conflict.*`/`*.local-conflict.*`/`*.peer-conflict.*`/`*.local.*`/`*.theirs.*`）
 - `gitignoreExtras` 追加进 managed 区块；`forceInclude` 生成 `!` 反选（置于忽略规则之后，后者覆盖前者）
 - **managed 区块外的用户自定义规则保留**，升级插件不会覆盖用户手动配置
 - 默认行为不变：不配置新字段时，.gitignore 内容与旧版完全一致（向后兼容）

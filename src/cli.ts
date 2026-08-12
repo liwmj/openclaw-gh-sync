@@ -52,7 +52,7 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
     const cred = readCredentials(credentialsPath(sync));
     const pat = cred ? extractPat(cred.trim()) : null;
     gitops = await createGitOps(cfg, sync, pat);
-    engine = new SyncEngine({ stateDir: state, syncDir: sync, config: cfg, gitops, log: (m) => console.log(m), onError: (e) => { lastError = String(e); } });
+    engine = new SyncEngine({ stateDir: state, syncDir: sync, config: cfg, gitops, log: (m) => console.log(m), onError: (e) => { lastError = String(e); }, backupNow: async () => { await backupEngine!.backupNow(); } });
     backupEngine = new BackupEngine({ stateDir: state, syncDir: sync, backupsDir: join(sync, "backups"), retain: cfg.backupRetain, include: cfg.include, gitops, log: (m) => console.log(m) });
     restoreEngine = new RestoreEngine({ syncDir: sync, stateDir: state, gitops, ownBranch: cfg.branch, fetchTimeoutMs: Math.max(cfg.gitTimeoutMs ?? 30_000, 180_000), log: (m) => console.log(m) });
     return { cfg };

@@ -29,6 +29,8 @@ export interface SyncDeps {
   gitops: GitOps;
   log: (msg: string) => void;
   onError: (err: unknown) => void;
+  /** 定时备份回调：按 backupIntervalH 周期触发（由 runtime 注入 backupEngine.backupNow） */
+  backupNow?: () => Promise<void>;
 }
 
 export interface EngineStatus {
@@ -46,6 +48,7 @@ export async function createGitOps(config: SyncConfig, syncDir: string, pat: str
 export class SyncEngine {
   private watcher: FileWatcher | null = null;
   private poller: Poller | null = null;
+  private backupTimer: ReturnType<typeof setInterval> | null = null;
   private isSyncing = false;
   private pendingPush = false;
   private lastPushAt: string | null = null;
@@ -89,11 +92,20 @@ export class SyncEngine {
           await this.pullNow();
         });
         this.poller.start();
+
+        // 定时 backup：按 backupIntervalH 周期触发（runtime 注入的 backupNow 回调）
+        if (this.deps.backupNow && config.backupIntervalH > 0) {
+          this.backupTimer = setInterval(() => {
+            void this.deps.backupNow!().catch((err) => this.deps.onError(err));
+          }, config.backupIntervalH * 3600_000);
+          this.backupTimer.unref?.();
+        }
       } catch (err) {
         this.started = false;
         await this.watcher?.stop();
         this.watcher = null;
         this.poller = null;
+        if (this.backupTimer) { clearInterval(this.backupTimer); this.backupTimer = null; }
         throw err;
       }
     } finally {
@@ -107,6 +119,7 @@ export class SyncEngine {
       this.started = false;
       await this.watcher?.stop();
       this.poller?.stop();
+      if (this.backupTimer) { clearInterval(this.backupTimer); this.backupTimer = null; }
       this.watcher = null;
       this.poller = null;
     } finally {
