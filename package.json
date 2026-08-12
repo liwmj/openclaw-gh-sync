@@ -1,11 +1,13 @@
 {
   "name": "@liwmj/openclaw-gh-sync",
-  "version": "0.6.14",
+  "version": "0.6.15",
   "description": "Real-time GitHub sync and official-backup archive upload for OpenClaw",
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
-  "engines": { "node": ">=22.22.3" },
+  "engines": {
+    "node": ">=22.22.3"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
@@ -13,8 +15,14 @@
     "prepare": "npm run build",
     "prepublishOnly": "bash scripts/build-check.sh"
   },
-  "files": ["dist", "openclaw.plugin.json", "README.md"],
-  "peerDependencies": { "openclaw": ">=2026.3.24" },
+  "files": [
+    "dist",
+    "openclaw.plugin.json",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "openclaw": ">=2026.3.24"
+  },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "typescript": "^5.6.0",
@@ -28,8 +36,15 @@
     "simple-git": "^3.33.0"
   },
   "openclaw": {
-    "extensions": ["./dist/index.js"],
-    "compat": { "pluginApi": ">=2026.3.24", "minGatewayVersion": "2026.3.24" },
-    "build": { "openclawVersion": "2026.7.1" }
+    "extensions": [
+      "./dist/index.js"
+    ],
+    "compat": {
+      "pluginApi": ">=2026.3.24",
+      "minGatewayVersion": "2026.3.24"
+    },
+    "build": {
+      "openclawVersion": "2026.7.1"
+    }
   }
 }
