@@ -12,24 +12,24 @@
 | pull | 远端领先拉取、无变更 no-op | | ⬜ |
 | sync | 自动触发链路、手动触发 | | ⬜ |
 | backup | 完整备份、排除规则、保留轮转 | | ⬜ |
-| restore | 真实恢复（非 dryRun）、dryRun 预览、指定快照、跨实例 | | ⬜ |
+| restore | 真实恢复（非 dryRun）、dryRun 预览、指定快照、跨实例 | tests/e2e-coverage.test.ts | 🟢 |
 | conflicts | 制造冲突→检测→解决 | | ⬜ |
 | setup | 向导正常路径、非 TTY 取消（E 回归） | | ⬜ |
-| reset | 脏文件→reset→远端落地+备份断言（F 回归） | | ⬜ |
+| reset | 脏文件→reset→远端落地+备份断言（F 回归） | tests/e2e-coverage.test.ts | 🟢 |
 
 ## 第二层：模块层（19 模块 × 直接测试引用）
 
 | 模块 | 直接测试 | 状态 |
 |---|---|---|
-| index.ts（插件入口 createPlugin） | 需新建：onStartup 激活、插件注册、生命周期 | ⬜ |
-| fsutil.ts | 需新建：mkdirp/ensureFileMode 直接单测 | ⬜ |
+| index.ts（插件入口 createPlugin） | createPlugin 注册 gateway_start/stop 钩子 + gh-sync 命令树 | tests/index.test.ts | 🟢 |
+| fsutil.ts | mkdirp 嵌套/幂等 + ensureFileMode noop | tests/fsutil.test.ts | 🟢 |
 | 其余 17 模块 | 已有直接引用（backup/cli/config/conflicts/credentials/exclude/gitcrypt/gitops/mirror/paths/poller/realtime/restore/setup/status/types/watcher） | 🟢 |
 
 ## 第三层：功能/边界场景（PRODUCT.md 9.1 + 9.2）
 
 | 场景 | 状态 |
 |---|---|
-| 空仓库首次同步（merge） | ⬜ |
+| 空仓库首次同步（merge） | 🟢 |
 | 远端已有数据 → merge / replace-local 选择 | ⬜ |
 | 本地旧配置 → 新仓库重新 setup（pre-setup 备份） | ⬜ |
 | 断网 push 失败 → 恢复自动补推 | ⬜ |
@@ -42,4 +42,4 @@
 
 | 版本 | 命令层 | 模块层 | 场景层 | 结论 |
 |---|---|---|---|---|
-| v0.6.15 | 9/9 | 19/19 | 8/8 | 待补测 |
+| v0.6.15 | 3/9 已绿（restore/reset 命令层） | 19/19（index/fsutil 已补） | 1/8 已绿（空仓库首同步） | 补测中，测试1号第二批 |
