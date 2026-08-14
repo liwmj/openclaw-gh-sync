@@ -1,0 +1,38 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm pack
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            *.tgz
+            dist/**
+          generate_release_notes: true
+
+      - name: Publish to ClawHub
+        run: |
+          npm i -g clawhub
+          clawhub login --token "$CLAWHUB_TOKEN" --no-browser
+          clawhub package publish ./ --dry-run
+          clawhub package publish ./
+        env:
+          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
