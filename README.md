@@ -1,4 +1,4 @@
-# @liwmj/openclaw-gh-sync
+# openclaw-gh-sync
 
 <div align="center">
 
@@ -376,3 +376,4 @@ GIT_CURL_VERBOSE=1 git ls-remote <repo-url> 2>&1 | grep "Connected to"
 | 空仓库 / 远程分支不存在                 | 正常运行即可，首次推送会自动创建分支和目录结构                                                                                                                                                                                             |
 | 出现合并冲突                            | pull 时若本地有未推送修改且远端同文件已变更，插件自动解决：主文件取远端版本，本地版本保存为 `<文件名>.local.<时间戳>` 副本（不会丢失数据），并在 pull 日志中提示冲突及副本位置。运行 `openclaw gh-sync conflicts` 可查看当前存在的冲突文件 |
 | 找不到 git-crypt                        | 安装 git-crypt（macOS: `brew install git-crypt`，Ubuntu: `sudo apt install git-crypt`），或在配置中将 `gitCryptEnabled` 设为 `false`                                                                                                       |
+| GitHub 网络不通 / 频繁超时             | 网络受限时可参考「网络受限环境使用指南」配置镜像加速；或直接使用 [ghlink](https://github.com/liwmj/ghlink) 项目——GitHub 链路自愈工具，自动处理 DNS 污染与 hosts 配置，从根源缓解 github.com 直连问题                                                                                                                                   |
