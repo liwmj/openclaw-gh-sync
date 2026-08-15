@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ConfigService, DEFAULT_CONFIG, sanitizeInstanceName } from "../src/config.js";
@@ -25,7 +25,12 @@ describe("ConfigService", () => {
     const dir = mkdtempSync(join(tmpdir(), "cfg-"));
     const path = join(dir, "config.json");
     const svc = new ConfigService(path);
-    const cfg = { ...DEFAULT_CONFIG, repo: "https://github.com/u/r.git", instanceName: "desktop", branch: "instances/desktop" };
+    const cfg = {
+      ...DEFAULT_CONFIG,
+      repo: "https://github.com/u/r.git",
+      instanceName: "desktop",
+      branch: "instances/desktop",
+    };
     svc.save(cfg);
     expect(svc.load()).toEqual(cfg);
     const mode = Number.parseInt(readFileSync(path).toString().trim(), 10); // noop, keeps linter quiet

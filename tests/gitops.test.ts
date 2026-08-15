@@ -22,6 +22,17 @@ describe("GitOps lifecycle", () => {
     expect(ab.behind).toBe(0);
     cleanup(bareDir, work);
   });
+
+  it("aheadBehind does not throw when the remote branch does not exist yet (first-sync boundary)", async () => {
+    const { bareDir, url } = makeBareRepo();
+    const work = makeWorkDir();
+    const branch = "instances/desktop";
+    const ops = new GitOps(work, url, branch, null);
+    await ops.initRepo();
+    // 未 push 前远端分支不存在：不应抛错，应视为 0/0（修复 CI 干净环境首次同步失败）
+    await expect(ops.aheadBehind()).resolves.toEqual({ ahead: 0, behind: 0 });
+    cleanup(bareDir, work);
+  });
 });
 
 describe("GitOps instance branch operations", () => {

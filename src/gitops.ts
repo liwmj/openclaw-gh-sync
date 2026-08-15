@@ -19,17 +19,19 @@ export class GitOps {
   }
 
   private makeGit(timeoutMs: number) {
-    return simpleGit({ baseDir: this.syncDir, timeout: { block: timeoutMs }, unsafe: { allowUnsafeEditor: true } }).env({
-      // 必须展开 process.env 保留 HOME/PATH 等：只覆盖 LANG/LC_ALL，
-      // 否则子进程环境被替换后 git 读不到 ~/.gitconfig 的 user.name/email → commit 报 Author identity unknown
-      ...process.env,
-      LANG: "C",
-      LC_ALL: "C",
-      LC_MESSAGES: "C",
-      // Bug B 修复：http(s) 传输阶段无数据超 30s 时 git 自身中止，防止超时后子进程残留累积
-      GIT_HTTP_LOW_SPEED_LIMIT: "1",
-      GIT_HTTP_LOW_SPEED_TIME: "30",
-    });
+    return simpleGit({ baseDir: this.syncDir, timeout: { block: timeoutMs }, unsafe: { allowUnsafeEditor: true } }).env(
+      {
+        // 必须展开 process.env 保留 HOME/PATH 等：只覆盖 LANG/LC_ALL，
+        // 否则子进程环境被替换后 git 读不到 ~/.gitconfig 的 user.name/email → commit 报 Author identity unknown
+        ...process.env,
+        LANG: "C",
+        LC_ALL: "C",
+        LC_MESSAGES: "C",
+        // Bug B 修复：http(s) 传输阶段无数据超 30s 时 git 自身中止，防止超时后子进程残留累积
+        GIT_HTTP_LOW_SPEED_LIMIT: "1",
+        GIT_HTTP_LOW_SPEED_TIME: "30",
+      },
+    );
   }
 
   async initRepo(): Promise<void> {
@@ -38,7 +40,9 @@ export class GitOps {
       await this.git.init();
     }
     this.writeGitignore();
-    const authedUrl = this.pat ? this.repoUrl.replace("https://", `https://x-access-token:${encodeURIComponent(this.pat)}@`) : this.repoUrl;
+    const authedUrl = this.pat
+      ? this.repoUrl.replace("https://", `https://x-access-token:${encodeURIComponent(this.pat)}@`)
+      : this.repoUrl;
     const remotes = await this.git.getRemotes(true);
     const origin = remotes.find((r) => r.name === "origin");
     if (!origin) {
@@ -136,14 +140,20 @@ export class GitOps {
     const managedEnd = "# ===== gh-sync managed end =====";
 
     // 保留 managed 区块外的用户自定义规则（升级/重写时不覆盖用户手动配置）
-    let userRules: string[] = [];
+    const userRules: string[] = [];
     if (existsSync(ignorePath)) {
       const existing = readFileSync(ignorePath, "utf8").split(/\r?\n/);
       let inManaged = false;
       for (const line of existing) {
         const trimmed = line.trim();
-        if (trimmed === managedStart) { inManaged = true; continue; }
-        if (trimmed === managedEnd) { inManaged = false; continue; }
+        if (trimmed === managedStart) {
+          inManaged = true;
+          continue;
+        }
+        if (trimmed === managedEnd) {
+          inManaged = false;
+          continue;
+        }
         if (!inManaged && trimmed !== "") userRules.push(line);
       }
     }
@@ -176,6 +186,10 @@ export class GitOps {
   }
 
   async aheadBehind(): Promise<AheadBehind> {
+    // 首次同步边界：远端分支尚未建立时（干净环境首次 push 前），无对比基准，视为 0/0 而非抛错
+    if (!(await this.remoteRefExists(this.branch))) {
+      return { ahead: 0, behind: 0 };
+    }
     const output = await this.git.raw(["rev-list", "--left-right", "--count", `HEAD...origin/${this.branch}`]);
     const [ahead = "0", behind = "0"] = output.trim().split(/\s+/);
     return { ahead: Number.parseInt(ahead, 10) || 0, behind: Number.parseInt(behind, 10) || 0 };
@@ -234,7 +248,10 @@ export class GitOps {
 
   async listChangedFiles(fromRef: string, toRef: string): Promise<string[]> {
     const output = await this.git.raw(["diff", "--name-only", `${fromRef}..${toRef}`]);
-    return output.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    return output
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter(Boolean);
   }
 
   async saveRemoteConflictFiles(filePaths: string[], timestamp: string, label: string): Promise<string[]> {

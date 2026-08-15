@@ -8,7 +8,10 @@ import type { EngineStatus } from "./realtime.js";
 export interface StatusDeps {
   config: SyncConfig | null;
   engine: { status(): EngineStatus } | null;
-  gitops: { aheadBehind(): Promise<{ ahead: number; behind: number }>; statusRaw(): Promise<{ isClean(): boolean }> } | null;
+  gitops: {
+    aheadBehind(): Promise<{ ahead: number; behind: number }>;
+    statusRaw(): Promise<{ isClean(): boolean }>;
+  } | null;
   syncDir: string;
   gitCrypt: SyncStatus["gitCrypt"];
   lastBackupAt: string | null;

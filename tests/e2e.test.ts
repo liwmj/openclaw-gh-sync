@@ -3,7 +3,6 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { createRuntime } from "../src/cli.js";
 import { DEFAULT_CONFIG, ConfigService } from "../src/config.js";
 import { GitOps } from "../src/gitops.js";

@@ -10,7 +10,10 @@ function makeProgram() {
   const find = (name: string) => root.find((n) => n.name === name);
   const ensure = (name: string) => {
     let n = find(name);
-    if (!n) { n = { name, subs: [] }; root.push(n); }
+    if (!n) {
+      n = { name, subs: [] };
+      root.push(n);
+    }
     return n;
   };
   const chain = (name: string) => ({
@@ -61,7 +64,9 @@ describe("plugin entry", () => {
 
     const ghSyncNode = program.root.find((n) => n.name === "gh-sync");
     expect(ghSyncNode).toBeTruthy();
-    expect(ghSyncNode!.subs).toEqual(expect.arrayContaining(["status", "push", "pull", "sync", "backup", "conflicts", "setup", "reset"]));
+    expect(ghSyncNode!.subs).toEqual(
+      expect.arrayContaining(["status", "push", "pull", "sync", "backup", "conflicts", "setup", "reset"]),
+    );
   });
 
   it("createPlugin does not throw with minimal api", () => {

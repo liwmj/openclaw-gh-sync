@@ -49,7 +49,7 @@ describe("e2e batch2 (command-level + boundary)", () => {
   }, 30000);
 
   it("pull is a no-op when remote has no changes (up-to-date)", async () => {
-    const { bareDir, url, root, stateDir, syncDir, rt } = setupState();
+    const { bareDir, root, stateDir, syncDir, rt } = setupState();
     try {
       writeFileSync(join(stateDir, "workspace", "hello.txt"), "v1");
       await rt.start();
@@ -76,18 +76,23 @@ describe("e2e batch2 (command-level + boundary)", () => {
       await new Promise((r) => setTimeout(r, 2500));
       const { rmSync } = await import("node:fs");
       rmSync(join(stateDir, "workspace", "a.txt"));
-      await expect.poll(async () => {
-        const remote = mkdtempSync(join(tmpdir(), "e2e-b2-remote-"));
-        try {
-          const remoteOps = new GitOps(remote, url, "instances/desktop", null);
-          await remoteOps.initRepo();
-          await remoteOps.fetchBranch("instances/desktop");
-          await remoteOps.ensureBranch("instances/desktop");
-          return existsSync(join(remote, "openclaw", "workspace", "a.txt")) ? "still-there" : "gone";
-        } finally {
-          cleanup(remote);
-        }
-      }, { timeout: 20000, interval: 500 }).toBe("gone");
+      await expect
+        .poll(
+          async () => {
+            const remote = mkdtempSync(join(tmpdir(), "e2e-b2-remote-"));
+            try {
+              const remoteOps = new GitOps(remote, url, "instances/desktop", null);
+              await remoteOps.initRepo();
+              await remoteOps.fetchBranch("instances/desktop");
+              await remoteOps.ensureBranch("instances/desktop");
+              return existsSync(join(remote, "openclaw", "workspace", "a.txt")) ? "still-there" : "gone";
+            } finally {
+              cleanup(remote);
+            }
+          },
+          { timeout: 20000, interval: 500 },
+        )
+        .toBe("gone");
     } finally {
       await rt.stop();
       cleanup(bareDir, root);
@@ -95,7 +100,7 @@ describe("e2e batch2 (command-level + boundary)", () => {
   }, 40000);
 
   it("断网补推: push failure recorded, recovered and synced via syncNow after network restore", async () => {
-    const { bareDir, url, root, stateDir, syncDir, rt } = setupState();
+    const { bareDir, root, stateDir, syncDir, rt } = setupState();
     try {
       const { renameSync } = await import("node:fs");
       writeFileSync(join(stateDir, "workspace", "hello.txt"), "v1");
@@ -168,7 +173,9 @@ describe("e2e batch2 (command-level + boundary)", () => {
       // pull force-accepts remote (local dirty preserved as sidecar)
       expect(readFileSync(join(stateDir, "workspace", "hello.txt"), "utf8")).toBe("remote-v2");
       const { readdirSync } = await import("node:fs");
-      const sidecars = readdirSync(join(syncDir, "openclaw", "workspace")).filter((n) => n.startsWith("hello.txt.local."));
+      const sidecars = readdirSync(join(syncDir, "openclaw", "workspace")).filter((n) =>
+        n.startsWith("hello.txt.local."),
+      );
       expect(sidecars.length).toBeGreaterThan(0);
       // sidecar holds the local dirty content
       expect(readFileSync(join(syncDir, "openclaw", "workspace", sidecars[0]), "utf8")).toBe("local-dirty");
@@ -193,6 +200,8 @@ describe("e2e batch2 (command-level + boundary)", () => {
       hasRemoteInstance: async () => false,
     };
     const prompts = { text: async () => undefined, confirm: async () => true, select: async () => undefined };
-    await expect(runSetupWizard({ prompts: prompts as never, io: io as never })).rejects.toThrow(/setup aborted: repo cancelled/);
+    await expect(runSetupWizard({ prompts: prompts as never, io: io as never })).rejects.toThrow(
+      /setup aborted: repo cancelled/,
+    );
   });
 });

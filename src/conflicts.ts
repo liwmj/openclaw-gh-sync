@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync, unlinkSync } from "node:fs";
+import { copyFileSync, mkdirSync, readdirSync, statSync, unlinkSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import type { ResolveResult } from "./types.js";
 

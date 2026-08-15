@@ -66,15 +66,28 @@ export class ConfigService {
     const errors: string[] = [];
     if (typeof raw !== "object" || raw === null) return { ok: false, errors: ["config is not an object"] };
     const cfg = raw as Partial<SyncConfig>;
-    if (typeof cfg.repo !== "string" || !/^https:\/\/github\.com\/.+/.test(cfg.repo)) errors.push("repo must be an https GitHub URL");
-    if (typeof cfg.instanceName !== "string" || !/^[a-z0-9-]+$/.test(cfg.instanceName)) errors.push("instanceName must match [a-z0-9-]");
-    if (typeof cfg.branch !== "string" || !cfg.branch.startsWith("instances/")) errors.push("branch must start with instances/");
+    if (typeof cfg.repo !== "string" || !/^https:\/\/github\.com\/.+/.test(cfg.repo))
+      errors.push("repo must be an https GitHub URL");
+    if (typeof cfg.instanceName !== "string" || !/^[a-z0-9-]+$/.test(cfg.instanceName))
+      errors.push("instanceName must match [a-z0-9-]");
+    if (typeof cfg.branch !== "string" || !cfg.branch.startsWith("instances/"))
+      errors.push("branch must start with instances/");
     if (typeof cfg.pollIntervalSec !== "number" || cfg.pollIntervalSec < 5) errors.push("pollIntervalSec >= 5");
     if (typeof cfg.backupIntervalH !== "number" || cfg.backupIntervalH < 1) errors.push("backupIntervalH >= 1");
-    if (cfg.syncStrategy !== undefined && cfg.syncStrategy !== "merge" && cfg.syncStrategy !== "replace-local") errors.push("syncStrategy must be merge or replace-local");
-    if (cfg.gitTimeoutMs !== undefined && (typeof cfg.gitTimeoutMs !== "number" || cfg.gitTimeoutMs < 5_000)) errors.push("gitTimeoutMs >= 5000");
-    if (cfg.gitignoreExtras !== undefined && (!Array.isArray(cfg.gitignoreExtras) || cfg.gitignoreExtras.some((x) => typeof x !== "string"))) errors.push("gitignoreExtras must be string[]");
-    if (cfg.forceInclude !== undefined && (!Array.isArray(cfg.forceInclude) || cfg.forceInclude.some((x) => typeof x !== "string"))) errors.push("forceInclude must be string[]");
+    if (cfg.syncStrategy !== undefined && cfg.syncStrategy !== "merge" && cfg.syncStrategy !== "replace-local")
+      errors.push("syncStrategy must be merge or replace-local");
+    if (cfg.gitTimeoutMs !== undefined && (typeof cfg.gitTimeoutMs !== "number" || cfg.gitTimeoutMs < 5_000))
+      errors.push("gitTimeoutMs >= 5000");
+    if (
+      cfg.gitignoreExtras !== undefined &&
+      (!Array.isArray(cfg.gitignoreExtras) || cfg.gitignoreExtras.some((x) => typeof x !== "string"))
+    )
+      errors.push("gitignoreExtras must be string[]");
+    if (
+      cfg.forceInclude !== undefined &&
+      (!Array.isArray(cfg.forceInclude) || cfg.forceInclude.some((x) => typeof x !== "string"))
+    )
+      errors.push("forceInclude must be string[]");
     return { ok: errors.length === 0, errors };
   }
 }

@@ -11,13 +11,23 @@ vi.mock("@clack/prompts", () => ({
 
 describe("planForSetup", () => {
   it("initializes git-crypt when available", () => {
-    const plan = planForSetup({ instanceNameRaw: "My Desktop!", repo: "https://github.com/u/r.git", gitCryptAvailable: true, gitCryptEnabled: true });
+    const plan = planForSetup({
+      instanceNameRaw: "My Desktop!",
+      repo: "https://github.com/u/r.git",
+      gitCryptAvailable: true,
+      gitCryptEnabled: true,
+    });
     expect(plan.instanceName).toBe("my-desktop");
     expect(plan.branch).toBe("instances/my-desktop");
     expect(plan.gitCryptAction).toBe("init");
   });
   it("skips sensitive sync when git-crypt missing but enabled", () => {
-    const plan = planForSetup({ instanceNameRaw: "box", repo: "https://github.com/u/r.git", gitCryptAvailable: false, gitCryptEnabled: true });
+    const plan = planForSetup({
+      instanceNameRaw: "box",
+      repo: "https://github.com/u/r.git",
+      gitCryptAvailable: false,
+      gitCryptEnabled: true,
+    });
     expect(plan.gitCryptAction).toBe("skip-sensitive");
   });
 });
@@ -45,9 +55,12 @@ describe("runSetupWizard", () => {
             if (typeof raw !== "object" || raw === null) return { ok: false, errors: ["config is not an object"] };
             const cfg = raw as Partial<SyncConfig>;
             const errors: string[] = [];
-            if (typeof cfg.repo !== "string" || !/^https:\/\/github\.com\/.+/.test(cfg.repo)) errors.push("repo must be an https GitHub URL");
-            if (typeof cfg.instanceName !== "string" || !/^[a-z0-9-]+$/.test(cfg.instanceName)) errors.push("instanceName must match [a-z0-9-]");
-            if (typeof cfg.branch !== "string" || !cfg.branch.startsWith("instances/")) errors.push("branch must start with instances/");
+            if (typeof cfg.repo !== "string" || !/^https:\/\/github\.com\/.+/.test(cfg.repo))
+              errors.push("repo must be an https GitHub URL");
+            if (typeof cfg.instanceName !== "string" || !/^[a-z0-9-]+$/.test(cfg.instanceName))
+              errors.push("instanceName must match [a-z0-9-]");
+            if (typeof cfg.branch !== "string" || !cfg.branch.startsWith("instances/"))
+              errors.push("branch must start with instances/");
             if (typeof cfg.pollIntervalSec !== "number" || cfg.pollIntervalSec < 5) errors.push("pollIntervalSec >= 5");
             if (typeof cfg.backupIntervalH !== "number" || cfg.backupIntervalH < 1) errors.push("backupIntervalH >= 1");
             return { ok: errors.length === 0, errors };
@@ -65,43 +78,59 @@ describe("runSetupWizard", () => {
 
   it("aborts when repo prompt is cancelled without saving anything", async () => {
     const { io, saved, written } = makeIo();
-    await expect(runSetupWizard({ prompts: makePrompts([CANCEL]), io })).rejects.toThrow("setup aborted: repo cancelled");
+    await expect(runSetupWizard({ prompts: makePrompts([CANCEL]), io })).rejects.toThrow(
+      "setup aborted: repo cancelled",
+    );
     expect(saved).toHaveLength(0);
     expect(written).toHaveLength(0);
   });
 
   it("aborts when PAT prompt is cancelled", async () => {
     const { io } = makeIo();
-    await expect(runSetupWizard({ prompts: makePrompts(["https://github.com/u/r.git", CANCEL]), io })).rejects.toThrow("setup aborted: PAT cancelled");
+    await expect(runSetupWizard({ prompts: makePrompts(["https://github.com/u/r.git", CANCEL]), io })).rejects.toThrow(
+      "setup aborted: PAT cancelled",
+    );
   });
 
   it("aborts when instance name prompt is cancelled", async () => {
     const { io } = makeIo();
-    await expect(runSetupWizard({ prompts: makePrompts(["https://github.com/u/r.git", "pat", CANCEL]), io })).rejects.toThrow("setup aborted: instance name cancelled");
+    await expect(
+      runSetupWizard({ prompts: makePrompts(["https://github.com/u/r.git", "pat", CANCEL]), io }),
+    ).rejects.toThrow("setup aborted: instance name cancelled");
   });
 
   it("validates config before saving and refuses an invalid repo", async () => {
     const { io, saved, written } = makeIo();
-    await expect(runSetupWizard({ prompts: makePrompts(["https://github.com/", "pat", "box", "degraded"]), io })).rejects.toThrow(/setup aborted: invalid config/);
+    await expect(
+      runSetupWizard({ prompts: makePrompts(["https://github.com/", "pat", "box", "degraded"]), io }),
+    ).rejects.toThrow(/setup aborted: invalid config/);
     expect(saved).toHaveLength(0);
     expect(written).toHaveLength(0);
   });
 
   it("writes credentials under the gh-sync credentials path and returns a validated config", async () => {
     const { io, saved, written } = makeIo();
-    const cfg = await runSetupWizard({ prompts: makePrompts(["https://github.com/u/r.git", "pat-123", "Box", "degraded"]), io });
+    const cfg = await runSetupWizard({
+      prompts: makePrompts(["https://github.com/u/r.git", "pat-123", "Box", "degraded"]),
+      io,
+    });
     expect(saved).toHaveLength(1);
     expect(cfg.repo).toBe("https://github.com/u/r");
     expect(cfg.branch).toBe("instances/box");
     expect(cfg.instanceName).toBe("box");
     expect(cfg.syncStrategy).toBe("merge");
-    expect(written).toEqual([{ file: "/state/gh-sync/.git-credentials", repo: "https://github.com/u/r", pat: "pat-123" }]);
+    expect(written).toEqual([
+      { file: "/state/gh-sync/.git-credentials", repo: "https://github.com/u/r", pat: "pat-123" },
+    ]);
   });
 
   it("shows strategy prompt when remote has existing instance data", async () => {
-    const { io, saved, written } = makeIo();
+    const { io } = makeIo();
     io.hasRemoteInstance = async () => true;
-    const cfg = await runSetupWizard({ prompts: makePrompts(["https://github.com/u/r.git", "pat-123", "Box", "replace-local", "degraded"]), io });
+    const cfg = await runSetupWizard({
+      prompts: makePrompts(["https://github.com/u/r.git", "pat-123", "Box", "replace-local", "degraded"]),
+      io,
+    });
     expect(cfg.syncStrategy).toBe("replace-local");
     expect(cfg.repo).toBe("https://github.com/u/r");
   });
