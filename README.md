@@ -1,7 +1,5 @@
 # openclaw-gh-sync
 
-<div align="center">
-
 OpenClaw 实时 GitHub 同步插件——将本地 OpenClaw 工作区双向同步到 GitHub 仓库，同时定时创建和上传官方备份存档。
 
 [![GitHub Actions CI](https://github.com/liwmj/openclaw-gh-sync/actions/workflows/ci.yml/badge.svg)](https://github.com/liwmj/openclaw-gh-sync/actions/workflows/ci.yml)
@@ -10,8 +8,6 @@ OpenClaw 实时 GitHub 同步插件——将本地 OpenClaw 工作区双向同�
 [![Docs](https://img.shields.io/badge/docs-passing-brightgreen?label=文档&style=flat)](docs/PRODUCT.md)
 [![Tests](https://img.shields.io/badge/tests-92%20passed-brightgreen?label=测试&style=flat)](docs/TEST_COVERAGE_MATRIX.md)
 [![Node](https://img.shields.io/badge/node-%3E%3D22.22.3-green?label=Node&style=flat)](package.json)
-
-</div>
 
 ## 目录
 
