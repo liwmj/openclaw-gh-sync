@@ -60,10 +60,7 @@
       },
       "syncStrategy": {
         "type": "string",
-        "enum": [
-          "merge",
-          "replace-local"
-        ],
+        "enum": ["merge", "replace-local"],
         "description": "How to handle first sync: merge (default) or replace-local"
       },
       "gitTimeoutMs": {

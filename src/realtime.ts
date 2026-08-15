@@ -1,6 +1,6 @@
 import type { SyncConfig } from "./types.js";
 import { join, relative } from "node:path";
-import { buildMirrorEntries, credentialsPath, mirrorRoot } from "./paths.js";
+import { buildMirrorEntries } from "./paths.js";
 import { compileExcludes } from "./exclude.js";
 import { copyAllToMirror, copyMirrorToSources, copyToMirror } from "./mirror.js";
 import { GitOps } from "./gitops.js";
@@ -12,13 +12,24 @@ import type { MirrorEntry, PullOutcome } from "./types.js";
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`operation timed out after ${ms}ms`)), ms);
-    p.then((v) => { clearTimeout(timer); resolve(v); }, (e) => { clearTimeout(timer); reject(e); });
+    p.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
+    );
   });
 }
 
 function cleanMirror(entries: MirrorEntry[]): void {
   for (const entry of entries) {
-    try { rmSync(entry.target, { recursive: true, force: true }); } catch {}
+    try {
+      rmSync(entry.target, { recursive: true, force: true });
+    } catch {}
   }
 }
 
@@ -40,7 +51,15 @@ export interface EngineStatus {
 }
 
 export async function createGitOps(config: SyncConfig, syncDir: string, pat: string | null): Promise<GitOps> {
-  const ops = new GitOps(syncDir, config.repo, config.branch, pat, config.gitTimeoutMs ?? 30_000, config.gitignoreExtras ?? [], config.forceInclude ?? []);
+  const ops = new GitOps(
+    syncDir,
+    config.repo,
+    config.branch,
+    pat,
+    config.gitTimeoutMs ?? 30_000,
+    config.gitignoreExtras ?? [],
+    config.forceInclude ?? [],
+  );
   await ops.initRepo();
   return ops;
 }
@@ -62,7 +81,9 @@ export class SyncEngine {
   private async acquireLock(): Promise<() => void> {
     let release: () => void;
     const prev = this.lock;
-    this.lock = new Promise<void>((resolve) => { release = resolve; });
+    this.lock = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     await prev;
     return release!;
   }
@@ -83,9 +104,14 @@ export class SyncEngine {
         await this.syncNow();
 
         const watchPaths = entries.map((e) => e.source);
-        this.watcher = new FileWatcher(watchPaths, [syncDir, ...config.exclude], (paths) => {
-          void this.onLocalChange(paths);
-        }, config.pushDebounceMs);
+        this.watcher = new FileWatcher(
+          watchPaths,
+          [syncDir, ...config.exclude],
+          (paths) => {
+            void this.onLocalChange(paths);
+          },
+          config.pushDebounceMs,
+        );
         this.watcher.start();
 
         this.poller = new Poller(config.pollIntervalSec * 1000, async () => {
@@ -105,7 +131,10 @@ export class SyncEngine {
         await this.watcher?.stop();
         this.watcher = null;
         this.poller = null;
-        if (this.backupTimer) { clearInterval(this.backupTimer); this.backupTimer = null; }
+        if (this.backupTimer) {
+          clearInterval(this.backupTimer);
+          this.backupTimer = null;
+        }
         throw err;
       }
     } finally {
@@ -119,7 +148,10 @@ export class SyncEngine {
       this.started = false;
       await this.watcher?.stop();
       this.poller?.stop();
-      if (this.backupTimer) { clearInterval(this.backupTimer); this.backupTimer = null; }
+      if (this.backupTimer) {
+        clearInterval(this.backupTimer);
+        this.backupTimer = null;
+      }
       this.watcher = null;
       this.poller = null;
     } finally {
@@ -129,7 +161,7 @@ export class SyncEngine {
 
   private async onLocalChange(paths: string[]): Promise<void> {
     try {
-      const { syncDir, stateDir, config, gitops } = this.deps;
+      const { syncDir, stateDir, config } = this.deps;
       const entries = buildMirrorEntries(stateDir, syncDir, config.include);
       const excluded = compileExcludes(config.exclude);
       const filtered = paths.filter((p) => !excluded(p.replace(stateDir + "/", "")));
@@ -149,7 +181,10 @@ export class SyncEngine {
     this.isSyncing = true;
     try {
       this.deps.log("[gh-sync] pushing...");
-      const committed = await withTimeout(this.deps.gitops.commitChanged(`Auto-sync: ${new Date().toISOString()}`), 30_000);
+      const committed = await withTimeout(
+        this.deps.gitops.commitChanged(`Auto-sync: ${new Date().toISOString()}`),
+        30_000,
+      );
       // Bug A 修复：即使没有新变更，也可能有上次 push 失败遗留的已 commit 未 push 提交，必须补推
       let ahead = committed ? 1 : 0;
       if (!committed) {
@@ -167,7 +202,9 @@ export class SyncEngine {
       }
     } catch (err) {
       this.deps.log(`[gh-sync] push failed: ${String(err)}`);
-      try { unlinkSync(join(this.deps.syncDir, ".git", "index.lock")); } catch {}
+      try {
+        unlinkSync(join(this.deps.syncDir, ".git", "index.lock"));
+      } catch {}
       this.pushFailures += 1;
       if (this.pushFailures <= 5) {
         this.pendingPush = true;
@@ -192,7 +229,7 @@ export class SyncEngine {
     if (this.isSyncing) return { status: "up-to-date" };
     this.isSyncing = true;
     try {
-      const { gitops, syncDir, stateDir, config } = this.deps;
+      const { gitops } = this.deps;
       const outcome = await withTimeout(gitops.pull(), 60_000);
       if (outcome.status === "ok" && outcome.conflictCopies && outcome.conflictCopies.length > 0) {
         this.deps.log(`[gh-sync] pull conflict: local changes preserved as ${outcome.conflictCopies.join(", ")}`);

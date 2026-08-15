@@ -102,7 +102,8 @@ describe("restore", () => {
       expect(await ops.fetch()).toBe(true);
       expect(await ops.aheadBehind()).toEqual({ ahead: 0, behind: 0 });
     } finally {
-      if (prevPath !== undefined) process.env.PATH = prevPath; else delete process.env.PATH;
+      if (prevPath !== undefined) process.env.PATH = prevPath;
+      else delete process.env.PATH;
       cleanup(bareDir, stateDir, snapRoot, binDir);
     }
   });
@@ -133,7 +134,9 @@ describe("restore", () => {
           ensureBranch: (name: string) => ops.ensureBranch(name),
           fetchBranch: (branch: string) => ops.fetchBranch(branch),
           commitChanged: (message: string) => ops.commitChanged(message),
-          pushCurrent: async () => { throw new Error("network down"); },
+          pushCurrent: async () => {
+            throw new Error("network down");
+          },
         },
         log: (m) => logs.push(m),
       });
@@ -142,7 +145,8 @@ describe("restore", () => {
       expect(existsSync(join(stateDir, "gh-sync", "openclaw", "x.txt"))).toBe(true);
       expect(logs.some((m) => m.includes("push failed"))).toBe(true);
     } finally {
-      if (prevPath !== undefined) process.env.PATH = prevPath; else delete process.env.PATH;
+      if (prevPath !== undefined) process.env.PATH = prevPath;
+      else delete process.env.PATH;
       cleanup(bareDir, stateDir, snapRoot, binDir);
     }
   });
@@ -155,7 +159,9 @@ describe("restore", () => {
       ownBranch: "main",
       gitops: {
         ensureBranch: async () => {},
-        fetchBranch: async () => { throw new Error("network unreachable"); },
+        fetchBranch: async () => {
+          throw new Error("network unreachable");
+        },
         commitChanged: async () => true,
         pushCurrent: async () => {},
       },

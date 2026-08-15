@@ -41,18 +41,23 @@ describe("e2e batch3 (sync chain + cross-instance + timeout boundary)", () => {
       // automatic chain: no manual sync call, watcher picks up the new file and pushes
       await new Promise((r) => setTimeout(r, 2500)); // chokidar settle
       writeFileSync(join(stateDir, "workspace", "auto.txt"), "auto");
-      await expect.poll(async () => {
-        const remote = mkdtempSync(join(tmpdir(), "e2e-b3-remote-"));
-        try {
-          const remoteOps = new GitOps(remote, url, "instances/desktop", null);
-          await remoteOps.initRepo();
-          await remoteOps.fetchBranch("instances/desktop");
-          await remoteOps.ensureBranch("instances/desktop");
-          return existsSync(join(remote, "openclaw", "workspace", "auto.txt")) ? "there" : "not-yet";
-        } finally {
-          cleanup(remote);
-        }
-      }, { timeout: 20000, interval: 500 }).toBe("there");
+      await expect
+        .poll(
+          async () => {
+            const remote = mkdtempSync(join(tmpdir(), "e2e-b3-remote-"));
+            try {
+              const remoteOps = new GitOps(remote, url, "instances/desktop", null);
+              await remoteOps.initRepo();
+              await remoteOps.fetchBranch("instances/desktop");
+              await remoteOps.ensureBranch("instances/desktop");
+              return existsSync(join(remote, "openclaw", "workspace", "auto.txt")) ? "there" : "not-yet";
+            } finally {
+              cleanup(remote);
+            }
+          },
+          { timeout: 20000, interval: 500 },
+        )
+        .toBe("there");
 
       // manual trigger
       const out = await rt.syncNow();

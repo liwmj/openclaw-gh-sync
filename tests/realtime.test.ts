@@ -3,8 +3,6 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DEFAULT_CONFIG } from "../src/config.js";
-import { buildMirrorEntries } from "../src/paths.js";
-import { compileExcludes } from "../src/exclude.js";
 import { GitOps } from "../src/gitops.js";
 import { SyncEngine } from "../src/realtime.js";
 import { cleanup, makeBareRepo } from "./helpers/git-env.js";
@@ -54,7 +52,13 @@ describe("SyncEngine", () => {
 
   it("start() is idempotent: a second call does not leak a watcher that keeps pushing after stop", async () => {
     const { bareDir, workDir, stateDir, syncDir } = setup();
-    const cfg = { ...DEFAULT_CONFIG, repo: bareDir, branch: "instances/desktop", instanceName: "desktop", pushDebounceMs: 300 };
+    const cfg = {
+      ...DEFAULT_CONFIG,
+      repo: bareDir,
+      branch: "instances/desktop",
+      instanceName: "desktop",
+      pushDebounceMs: 300,
+    };
     const ops = new GitOps(syncDir, bareDir, cfg.branch, null);
     const engine = new SyncEngine({ syncDir, stateDir, config: cfg, gitops: ops, log: () => {}, onError: () => {} });
     await engine.start();
@@ -75,7 +79,13 @@ describe("SyncEngine", () => {
 
   it("start() clears the guard on failure so a retry starts the watcher", async () => {
     const { bareDir, workDir, stateDir, syncDir } = setup();
-    const cfg = { ...DEFAULT_CONFIG, repo: bareDir, branch: "instances/desktop", instanceName: "desktop", pushDebounceMs: 300 };
+    const cfg = {
+      ...DEFAULT_CONFIG,
+      repo: bareDir,
+      branch: "instances/desktop",
+      instanceName: "desktop",
+      pushDebounceMs: 300,
+    };
     const ops = new GitOps(syncDir, bareDir, cfg.branch, null);
     let fail = true;
     const realInit = ops.initRepo.bind(ops);
@@ -122,11 +132,16 @@ describe("SyncEngine", () => {
 
     rmSync(join(stateDir, "workspace", "a.txt"));
     // 删除文件是正常同步操作：镜像副本被移除、变更推送到远端，不触发 onError 也不崩溃
-    await expect.poll(async () => {
-      const mirrorFile = join(syncDir, "openclaw", "workspace", "a.txt");
-      const ab = await ops.aheadBehind();
-      return !existsSync(mirrorFile) && ab.ahead === 0 && ab.behind === 0;
-    }, { timeout: 10000, interval: 100 }).toBe(true);
+    await expect
+      .poll(
+        async () => {
+          const mirrorFile = join(syncDir, "openclaw", "workspace", "a.txt");
+          const ab = await ops.aheadBehind();
+          return !existsSync(mirrorFile) && ab.ahead === 0 && ab.behind === 0;
+        },
+        { timeout: 10000, interval: 100 },
+      )
+      .toBe(true);
     expect(errors).toHaveLength(0);
 
     await engine.stop();

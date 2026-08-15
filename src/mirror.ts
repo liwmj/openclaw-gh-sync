@@ -42,7 +42,11 @@ export function copyAllToMirror(entries: MirrorEntry[], excluded: (rel: string) 
   return count;
 }
 
-export function copyToMirror(entries: MirrorEntry[], sourcePaths: string[], excluded: (rel: string) => boolean): number {
+export function copyToMirror(
+  entries: MirrorEntry[],
+  sourcePaths: string[],
+  excluded: (rel: string) => boolean,
+): number {
   let count = 0;
   for (const e of entries) {
     for (const sp of sourcePaths) {
@@ -50,9 +54,16 @@ export function copyToMirror(entries: MirrorEntry[], sourcePaths: string[], excl
       if (rel.startsWith("..") || excluded(rel)) continue;
       const tgt = join(e.target, rel);
       let st;
-      try { st = statSync(sp); } catch { st = null; }
+      try {
+        st = statSync(sp);
+      } catch {
+        st = null;
+      }
       if (!st) {
-        try { rmSync(tgt, { force: true }); count += 1; } catch {}
+        try {
+          rmSync(tgt, { force: true });
+          count += 1;
+        } catch {}
         continue;
       }
       if (st.isDirectory()) {
@@ -67,13 +78,19 @@ export function copyToMirror(entries: MirrorEntry[], sourcePaths: string[], excl
   return count;
 }
 
-export function copyMirrorToSources(entries: MirrorEntry[], excluded: (rel: string) => boolean, deletedPaths: string[] = []): number {
+export function copyMirrorToSources(
+  entries: MirrorEntry[],
+  excluded: (rel: string) => boolean,
+  deletedPaths: string[] = [],
+): number {
   const deleteSet = new Set(deletedPaths);
   let count = 0;
   for (const e of entries) {
     for (const p of deleteSet) {
       const sp = join(e.source, p);
-      try { rmSync(sp, { recursive: true, force: true }); } catch {}
+      try {
+        rmSync(sp, { recursive: true, force: true });
+      } catch {}
     }
     count += copyDirIfChanged(e.target, e.source, excluded, e.target);
   }

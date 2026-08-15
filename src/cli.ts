@@ -16,7 +16,16 @@ import type { SyncStatus } from "./types.js";
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`operation timed out after ${ms}ms`)), ms);
-    p.then((v) => { clearTimeout(timer); resolve(v); }, (e) => { clearTimeout(timer); reject(e); });
+    p.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
+    );
   });
 }
 
@@ -52,9 +61,36 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
     const cred = readCredentials(credentialsPath(sync));
     const pat = cred ? extractPat(cred.trim()) : null;
     gitops = await createGitOps(cfg, sync, pat);
-    engine = new SyncEngine({ stateDir: state, syncDir: sync, config: cfg, gitops, log: (m) => console.log(m), onError: (e) => { lastError = String(e); }, backupNow: async () => { await backupEngine!.backupNow(); } });
-    backupEngine = new BackupEngine({ stateDir: state, syncDir: sync, backupsDir: join(sync, "backups"), retain: cfg.backupRetain, include: cfg.include, gitops, log: (m) => console.log(m) });
-    restoreEngine = new RestoreEngine({ syncDir: sync, stateDir: state, gitops, ownBranch: cfg.branch, fetchTimeoutMs: Math.max(cfg.gitTimeoutMs ?? 30_000, 180_000), log: (m) => console.log(m) });
+    engine = new SyncEngine({
+      stateDir: state,
+      syncDir: sync,
+      config: cfg,
+      gitops,
+      log: (m) => console.log(m),
+      onError: (e) => {
+        lastError = String(e);
+      },
+      backupNow: async () => {
+        await backupEngine!.backupNow();
+      },
+    });
+    backupEngine = new BackupEngine({
+      stateDir: state,
+      syncDir: sync,
+      backupsDir: join(sync, "backups"),
+      retain: cfg.backupRetain,
+      include: cfg.include,
+      gitops,
+      log: (m) => console.log(m),
+    });
+    restoreEngine = new RestoreEngine({
+      syncDir: sync,
+      stateDir: state,
+      gitops,
+      ownBranch: cfg.branch,
+      fetchTimeoutMs: Math.max(cfg.gitTimeoutMs ?? 30_000, 180_000),
+      log: (m) => console.log(m),
+    });
     return { cfg };
   }
 
@@ -100,7 +136,9 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
           try {
             if (await withTimeout(gitops.fetchBranch(cfg.branch), 90_000)) {
               console.log("[gh-sync] replace-local: remote branch found, restoring...");
-              const restored = await restoreEngine!.restore({ fromInstance: cfg.instanceName, yes: true }).catch(() => null);
+              const restored = await restoreEngine!
+                .restore({ fromInstance: cfg.instanceName, yes: true })
+                .catch(() => null);
               if (restored) {
                 console.log("[gh-sync] replace-local: backup restored");
                 cfg.syncStrategy = "merge";
@@ -109,15 +147,23 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
                 console.log("[gh-sync] replace-local: no backup, force-accepting remote");
                 const { renameSync, mkdirSync, rmSync, readdirSync } = await import("node:fs");
                 const { tmpdir } = await import("node:os");
-                const backupDir = join(tmpdir(), `gh-sync-pre-replace-${new Date().toISOString().replace(/[:.]/g, "-")}`);
+                const backupDir = join(
+                  tmpdir(),
+                  `gh-sync-pre-replace-${new Date().toISOString().replace(/[:.]/g, "-")}`,
+                );
                 mkdirSync(backupDir, { recursive: true });
                 for (const entry of buildMirrorEntries(state, sync, cfg.include)) {
-                  try { renameSync(entry.source, join(backupDir, entry.relative.replace(/\//g, "_"))); }
-                  catch {
+                  try {
+                    renameSync(entry.source, join(backupDir, entry.relative.replace(/\//g, "_")));
+                  } catch {
                     for (const name of readdirSync(entry.source)) {
                       if (name === ".git") continue;
-                      try { renameSync(join(entry.source, name), join(backupDir, name)); } catch {
-                        try { rmSync(join(entry.source, name), { recursive: true, force: true }); } catch {}
+                      try {
+                        renameSync(join(entry.source, name), join(backupDir, name));
+                      } catch {
+                        try {
+                          rmSync(join(entry.source, name), { recursive: true, force: true });
+                        } catch {}
                       }
                     }
                   }
@@ -183,10 +229,18 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
           writeCredentials,
           hasRemoteInstance: async (_repo: string, pat: string, branch: string): Promise<boolean> => {
             try {
-              const base = /^https?:\/\//i.test(_repo) ? _repo : `https://github.com/${_repo.replace(/^\/+/, "").replace(/^github\.com\//, "")}`;
-              const url = base.replace(/\.git$/, "").replace("https://", `https://x-access-token:${encodeURIComponent(pat)}@`);
+              const base = /^https?:\/\//i.test(_repo)
+                ? _repo
+                : `https://github.com/${_repo.replace(/^\/+/, "").replace(/^github\.com\//, "")}`;
+              const url = base
+                .replace(/\.git$/, "")
+                .replace("https://", `https://x-access-token:${encodeURIComponent(pat)}@`);
               const { execFileSync } = await import("node:child_process");
-              const out = execFileSync("git", ["ls-remote", "--heads", url, `refs/heads/${branch}`], { encoding: "utf8", timeout: 5000, stdio: ["ignore", "pipe", "pipe"] });
+              const out = execFileSync("git", ["ls-remote", "--heads", url, `refs/heads/${branch}`], {
+                encoding: "utf8",
+                timeout: 5000,
+                stdio: ["ignore", "pipe", "pipe"],
+              });
               return out.trim().length > 0;
             } catch {
               return false;
@@ -206,12 +260,17 @@ export function createRuntime(opts: { stateDir: string; env: NodeJS.ProcessEnv }
       const backupDir = join(tmpdir(), `gh-sync-reset-${new Date().toISOString().replace(/[:.]/g, "-")}`);
       mkdirSync(backupDir, { recursive: true });
       for (const entry of buildMirrorEntries(state, sync, cfg.include)) {
-        try { renameSync(entry.source, join(backupDir, entry.relative.replace(/\//g, "_"))); }
-        catch {
+        try {
+          renameSync(entry.source, join(backupDir, entry.relative.replace(/\//g, "_")));
+        } catch {
           for (const name of readdirSync(entry.source)) {
             if (name === ".git") continue;
-            try { renameSync(join(entry.source, name), join(backupDir, name)); } catch {
-              try { rmSync(join(entry.source, name), { recursive: true, force: true }); } catch {}
+            try {
+              renameSync(join(entry.source, name), join(backupDir, name));
+            } catch {
+              try {
+                rmSync(join(entry.source, name), { recursive: true, force: true });
+              } catch {}
             }
           }
         }
@@ -244,28 +303,44 @@ export function registerCommands(program: CommanderProgram, rt: Runtime): void {
 
   const ghSync = program.command("gh-sync").description("OpenClaw GitHub sync and backup");
 
-  ghSync.command("status").description("Show config status, sync timestamps, ahead/behind, conflicts").action(async () => {
-    const s = await rt.status();
-    console.log(JSON.stringify(s, null, 2));
-  });
+  ghSync
+    .command("status")
+    .description("Show config status, sync timestamps, ahead/behind, conflicts")
+    .action(async () => {
+      const s = await rt.status();
+      console.log(JSON.stringify(s, null, 2));
+    });
 
-  ghSync.command("push").description("Force a push cycle immediately").action(async () => {
-    console.log(await rt.pushNow());
-  });
+  ghSync
+    .command("push")
+    .description("Force a push cycle immediately")
+    .action(async () => {
+      console.log(await rt.pushNow());
+    });
 
-  ghSync.command("pull").description("Force a pull cycle immediately").action(async () => {
-    console.log(await rt.pullNow());
-  });
+  ghSync
+    .command("pull")
+    .description("Force a pull cycle immediately")
+    .action(async () => {
+      console.log(await rt.pullNow());
+    });
 
-  ghSync.command("sync").description("Force a full sync cycle (pull + push)").action(async () => {
-    console.log(await rt.syncNow());
-  });
+  ghSync
+    .command("sync")
+    .description("Force a full sync cycle (pull + push)")
+    .action(async () => {
+      console.log(await rt.syncNow());
+    });
 
-  ghSync.command("backup").description("Create and upload a backup archive now").action(async () => {
-    console.log(await rt.backupNow());
-  });
+  ghSync
+    .command("backup")
+    .description("Create and upload a backup archive now")
+    .action(async () => {
+      console.log(await rt.backupNow());
+    });
 
-  ghSync.command("restore [snapshot]")
+  ghSync
+    .command("restore [snapshot]")
     .description("Restore from a backup snapshot or another instance")
     .option("--dry-run", "Preview what the restore would change")
     .option("--yes", "Apply the restore without confirmation")
@@ -275,22 +350,33 @@ export function registerCommands(program: CommanderProgram, rt: Runtime): void {
       // Commander 回调参数为 (snapshot, options, command)：options 在倒数第二个，不是最后一个（最后一个是 command 对象）
       const opts = (args[1] ?? {}) as { dryRun?: boolean; yes?: boolean; fromInstance?: string };
       try {
-        console.log(await rt.restore({ snapshot, fromInstance: opts.fromInstance, dryRun: opts.dryRun, yes: opts.yes }));
+        console.log(
+          await rt.restore({ snapshot, fromInstance: opts.fromInstance, dryRun: opts.dryRun, yes: opts.yes }),
+        );
       } catch (e) {
         console.error(String(e));
         process.exitCode = 1;
       }
     });
 
-  ghSync.command("conflicts").description("List active merge conflicts").action(async () => {
-    console.log(await rt.conflicts());
-  });
+  ghSync
+    .command("conflicts")
+    .description("List active merge conflicts")
+    .action(async () => {
+      console.log(await rt.conflicts());
+    });
 
-  ghSync.command("setup").description("Interactive first-time configuration").action(async () => {
-    console.log(await rt.setup());
-  });
+  ghSync
+    .command("setup")
+    .description("Interactive first-time configuration")
+    .action(async () => {
+      console.log(await rt.setup());
+    });
 
-  ghSync.command("reset").description("Replace local state with remote data (backup old files)").action(async () => {
-    console.log(await rt.reset());
-  });
+  ghSync
+    .command("reset")
+    .description("Replace local state with remote data (backup old files)")
+    .action(async () => {
+      console.log(await rt.reset());
+    });
 }

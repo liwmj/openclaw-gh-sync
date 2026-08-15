@@ -89,7 +89,9 @@ export class BackupEngine {
       } catch (err) {
         lastErr = err;
         if (attempt < delays.length) {
-          log(`[gh-sync] backup push failed (attempt ${attempt + 1}), retrying in ${delays[attempt] / 1000}s: ${String(err)}`);
+          log(
+            `[gh-sync] backup push failed (attempt ${attempt + 1}), retrying in ${delays[attempt] / 1000}s: ${String(err)}`,
+          );
           await new Promise((r) => setTimeout(r, delays[attempt]));
         }
       }
@@ -133,7 +135,14 @@ export class BackupEngine {
       .map((f) => join(backupsDir, f));
     if (files.length <= retain) return;
     const sorted = files
-      .filter((f) => { try { statSync(f); return true; } catch { return false; } })
+      .filter((f) => {
+        try {
+          statSync(f);
+          return true;
+        } catch {
+          return false;
+        }
+      })
       .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
     const toDelete = sorted.slice(retain);
     for (const f of toDelete) unlinkSync(f);

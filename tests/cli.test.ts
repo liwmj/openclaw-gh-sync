@@ -37,7 +37,13 @@ describe("CLI runtime", () => {
     redirectOriginTo(syncDir, bareDir);
 
     const cfgService = new ConfigService(join(syncDir, "config.json"));
-    cfgService.save({ ...DEFAULT_CONFIG, repo: FAKE_REPO, branch: "instances/desktop", instanceName: "desktop", pushDebounceMs: 300 });
+    cfgService.save({
+      ...DEFAULT_CONFIG,
+      repo: FAKE_REPO,
+      branch: "instances/desktop",
+      instanceName: "desktop",
+      pushDebounceMs: 300,
+    });
 
     const rt = createRuntime({ stateDir, env: { ...process.env } });
     await rt.start();
@@ -87,9 +93,15 @@ describe("CLI runtime", () => {
     const { bareDir } = makeBareRepo();
     redirectOriginTo(syncDir, bareDir);
     mkdirSync(join(syncDir, "gh-sync.opencfg"), { recursive: true });
-    writeFileSync(join(syncDir, "config.json"), JSON.stringify({
-      ...DEFAULT_CONFIG, repo: FAKE_REPO, branch: "instances/desktop", instanceName: "desktop",
-    }));
+    writeFileSync(
+      join(syncDir, "config.json"),
+      JSON.stringify({
+        ...DEFAULT_CONFIG,
+        repo: FAKE_REPO,
+        branch: "instances/desktop",
+        instanceName: "desktop",
+      }),
+    );
     const rt = createRuntime({ stateDir, env: { ...process.env } });
     await rt.start();
     writeFileSync(join(stateDir, "workspace", "p.txt"), "p");
@@ -104,9 +116,15 @@ describe("CLI runtime", () => {
     const { bareDir } = makeBareRepo();
     redirectOriginTo(syncDir, bareDir);
     mkdirSync(join(syncDir, "gh-sync.opencfg"), { recursive: true });
-    writeFileSync(join(syncDir, "config.json"), JSON.stringify({
-      ...DEFAULT_CONFIG, repo: FAKE_REPO, branch: "instances/desktop", instanceName: "desktop",
-    }));
+    writeFileSync(
+      join(syncDir, "config.json"),
+      JSON.stringify({
+        ...DEFAULT_CONFIG,
+        repo: FAKE_REPO,
+        branch: "instances/desktop",
+        instanceName: "desktop",
+      }),
+    );
     const rt = createRuntime({ stateDir, env: { ...process.env } });
     await rt.start();
     expect(await rt.conflicts()).toBe("no conflicts");
@@ -129,13 +147,15 @@ describe("registerCommands", () => {
           if (name) registered.push({ name, desc });
           return this;
         },
-        option() { return this; },
+        option() {
+          return this;
+        },
         action: () => {},
       };
     }
     const program = { command: () => makeCommand() };
     const rt = {
-      status: async () => ({ configured: false } as never),
+      status: async () => ({ configured: false }) as never,
       syncNow: async () => "",
       pushNow: async () => "",
       pullNow: async () => "",
@@ -151,7 +171,17 @@ describe("registerCommands", () => {
     registerCommands(program, rt);
 
     const names = registered.map((r) => r.name);
-    expect(names).toEqual(["status", "push", "pull", "sync", "backup", "restore [snapshot]", "conflicts", "setup", "reset"]);
+    expect(names).toEqual([
+      "status",
+      "push",
+      "pull",
+      "sync",
+      "backup",
+      "restore [snapshot]",
+      "conflicts",
+      "setup",
+      "reset",
+    ]);
     expect(registered.every((r) => r.desc.length > 0)).toBe(true);
   });
 });

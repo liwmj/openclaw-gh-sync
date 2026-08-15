@@ -29,11 +29,18 @@ describe("BackupEngine", () => {
     const stateDir = join(work, "state");
     mkdirSync(join(stateDir, "workspace"), { recursive: true });
     writeFileSync(join(stateDir, "workspace", "MEMORY.md"), "# mem");
-    const cfg = { repo: url, branch: "instances/a" } as never;
     mkdirSync(syncDir, { recursive: true });
     const ops = new GitOps(syncDir, url, "instances/a", null);
     await ops.initRepo();
-    const engine = new BackupEngine({ stateDir, syncDir, backupsDir: backups, retain: 7, include: ["workspace"], gitops: ops, log: () => {} });
+    const engine = new BackupEngine({
+      stateDir,
+      syncDir,
+      backupsDir: backups,
+      retain: 7,
+      include: ["workspace"],
+      gitops: ops,
+      log: () => {},
+    });
     const result = await engine.backupNow();
     expect(result).not.toBeNull();
     expect(result!.archivePath).toContain("backups");
@@ -53,7 +60,15 @@ describe("BackupEngine", () => {
 
     const ops = new GitOps(syncDir, url, "instances/a", null);
     await ops.initRepo();
-    const engine = new BackupEngine({ stateDir, syncDir, backupsDir: backups, retain: 2, include: ["workspace"], gitops: ops, log: () => {} });
+    const engine = new BackupEngine({
+      stateDir,
+      syncDir,
+      backupsDir: backups,
+      retain: 2,
+      include: ["workspace"],
+      gitops: ops,
+      log: () => {},
+    });
 
     const files = ["a.tar.gz", "b.tar.gz", "c.tar.gz", "d.tar.gz", "e.tar.gz"];
     const now = Date.now();

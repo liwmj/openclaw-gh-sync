@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { GitOps } from "../src/gitops.js";
@@ -16,7 +16,15 @@ function makeOps(overrides: { gitignoreExtras?: string[]; forceInclude?: string[
   // 先 init 再设置 insteadOf，把 FAKE_REPO 映射到本地 bare repo，避免 initRepo 的 fetch 走真实网络
   execFileSync("git", ["init", dir], { stdio: "ignore" });
   execFileSync("git", ["-C", dir, "config", `url.${bareDir}.insteadOf`, FAKE_REPO], { stdio: "ignore" });
-  const ops = new GitOps(dir, FAKE_REPO, "instances/desktop", null, 30_000, overrides.gitignoreExtras ?? [], overrides.forceInclude ?? []);
+  const ops = new GitOps(
+    dir,
+    FAKE_REPO,
+    "instances/desktop",
+    null,
+    30_000,
+    overrides.gitignoreExtras ?? [],
+    overrides.forceInclude ?? [],
+  );
   return { dir, ops, bareDir, url };
 }
 

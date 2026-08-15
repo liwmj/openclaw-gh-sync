@@ -55,9 +55,13 @@ export async function runSetupWizard(opts: {
   // 统一兜底：undefined 视为取消，避免把字面量 "undefined" 当合法输入继续走流程。
   const cancelled = (v: unknown): boolean => isCancel(v) || v === undefined;
 
-  const repoRes = await prompts.text({ message: "GitHub repository (username/repo or https://github.com/username/repo)" });
+  const repoRes = await prompts.text({
+    message: "GitHub repository (username/repo or https://github.com/username/repo)",
+  });
   if (cancelled(repoRes)) abort("repo");
-  const patRes = await prompts.text({ message: "GitHub Personal Access Token (Fine-grained: Contents=Read+Write, or Classic: repo scope)" });
+  const patRes = await prompts.text({
+    message: "GitHub Personal Access Token (Fine-grained: Contents=Read+Write, or Classic: repo scope)",
+  });
   if (cancelled(patRes)) abort("PAT");
   const instanceNameRawRes = await prompts.text({ message: "Instance name" });
   if (cancelled(instanceNameRawRes)) abort("instance name");
@@ -65,7 +69,9 @@ export async function runSetupWizard(opts: {
   const instanceNameRaw = String(instanceNameRawRes);
   let rawRepo = String(repoRes);
   if (/^(git@|git:\/\/|ssh:\/\/)/.test(rawRepo)) {
-    throw new Error("setup aborted: SSH and git protocol URLs are not supported. Use https://github.com/username/repo or just username/repo");
+    throw new Error(
+      "setup aborted: SSH and git protocol URLs are not supported. Use https://github.com/username/repo or just username/repo",
+    );
   }
   if (!/^https?:\/\//i.test(rawRepo)) {
     rawRepo = rawRepo.replace(/^\/+/, "").replace(/^github\.com\//, "");
@@ -91,12 +97,24 @@ export async function runSetupWizard(opts: {
   const hasRemote = await io.hasRemoteInstance(repo, pat, plan.branch).catch(() => false);
   const oldCfg = io.configService.load();
   if (hasRemote || (oldCfg && oldCfg.repo !== repo)) {
-    const reason = hasRemote ? `Remote already has data for instance "${plan.instanceName}".` : "Repository address has changed.";
+    const reason = hasRemote
+      ? `Remote already has data for instance "${plan.instanceName}".`
+      : "Repository address has changed.";
     const strategyRes = await prompts.select({
       message: `${reason} How should sync handle it?`,
       options: [
-        { value: "merge", label: hasRemote ? "Merge — combine local and remote data (recommended)" : "Keep local — push current state to the new repository" },
-        { value: "replace-local", label: hasRemote ? "Replace local — overwrite local with remote (use when migrating)" : "Start fresh — back up old data and begin clean on new repository" },
+        {
+          value: "merge",
+          label: hasRemote
+            ? "Merge — combine local and remote data (recommended)"
+            : "Keep local — push current state to the new repository",
+        },
+        {
+          value: "replace-local",
+          label: hasRemote
+            ? "Replace local — overwrite local with remote (use when migrating)"
+            : "Start fresh — back up old data and begin clean on new repository",
+        },
       ],
     });
     if (cancelled(strategyRes)) abort("strategy selection");
@@ -157,8 +175,12 @@ export async function runSetupWizard(opts: {
       const ts = new Date().toISOString().replace(/[:.]/g, "-");
       renameSync(mirror, join(io.syncDir, "backups", `pre-setup-${ts}`));
     } catch {}
-    try { rmSync(join(io.syncDir, ".git"), { recursive: true, force: true }); } catch {}
-    try { rmSync(join(io.syncDir, "openclaw"), { recursive: true, force: true }); } catch {}
+    try {
+      rmSync(join(io.syncDir, ".git"), { recursive: true, force: true });
+    } catch {}
+    try {
+      rmSync(join(io.syncDir, "openclaw"), { recursive: true, force: true });
+    } catch {}
   }
   return cfg;
 }

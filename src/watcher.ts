@@ -28,7 +28,12 @@ export class FileWatcher {
         this.onChange(paths);
       }, this.debounceMs);
     };
-    this.watcher.on("add", schedule).on("change", schedule).on("unlink", schedule).on("addDir", schedule).on("unlinkDir", schedule);
+    this.watcher
+      .on("add", schedule)
+      .on("change", schedule)
+      .on("unlink", schedule)
+      .on("addDir", schedule)
+      .on("unlinkDir", schedule);
   }
 
   async stop(): Promise<void> {

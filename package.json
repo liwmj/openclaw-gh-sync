@@ -13,7 +13,11 @@
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prepare": "npm run build",
-    "prepublishOnly": "bash scripts/build-check.sh"
+    "prepublishOnly": "bash scripts/build-check.sh",
+    "lint": "eslint src tests",
+    "lint:fix": "eslint src tests --fix",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write ."
   },
   "files": [
     "dist",
@@ -24,8 +28,13 @@
     "openclaw": ">=2026.3.24"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^24.0.0",
+    "eslint": "^10.8.1",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.6",
     "typescript": "^5.6.0",
+    "typescript-eslint": "^8.67.0",
     "vitest": "^3.0.0"
   },
   "dependencies": {

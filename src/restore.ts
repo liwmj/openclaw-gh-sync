@@ -35,16 +35,24 @@ export function verifyArchive(archivePath: string): Promise<boolean> {
 export class RestoreEngine {
   constructor(private readonly deps: RestoreDeps) {}
 
-  async restore(opts: { snapshot?: string; fromInstance?: string; dryRun?: boolean; yes?: boolean }): Promise<RestoreResult> {
+  async restore(opts: {
+    snapshot?: string;
+    fromInstance?: string;
+    dryRun?: boolean;
+    yes?: boolean;
+  }): Promise<RestoreResult> {
     const { stateDir, syncDir, gitops } = this.deps;
     if (opts.snapshot && opts.fromInstance) {
       throw new Error("snapshot and fromInstance are mutually exclusive");
     }
-    let archive: string | null = opts.snapshot ? join(syncDir, "backups", opts.snapshot) : latestLocal(join(syncDir, "backups"));
+    let archive: string | null = opts.snapshot
+      ? join(syncDir, "backups", opts.snapshot)
+      : latestLocal(join(syncDir, "backups"));
     if (opts.fromInstance) {
       const branch = `instances/${opts.fromInstance}`;
       // 慢网络下跨实例 fetch 可超 30s（实测 ~170s）：用更宽松的超时，避免误判网络错误
-      const fetchTimeoutMs = this.deps.fetchTimeoutMs ?? Math.max((this.deps as { gitTimeoutMs?: number }).gitTimeoutMs ?? 30_000, 180_000);
+      const fetchTimeoutMs =
+        this.deps.fetchTimeoutMs ?? Math.max((this.deps as { gitTimeoutMs?: number }).gitTimeoutMs ?? 30_000, 180_000);
       if (!(await gitops.fetchBranch(branch, fetchTimeoutMs))) {
         throw new Error(`no remote instance: ${opts.fromInstance}`);
       }
