@@ -16,7 +16,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
       - run: npm ci
       - run: npm run build
       - name: Create GitHub Release
@@ -24,6 +23,6 @@ jobs:
         with:
           generate_release_notes: true
       - name: Publish to ClawHub
-        run: npx clawhub publish --yes 2>/dev/null || echo "clawhub publish skipped (not configured)"
+        run: npx clawhub package publish . --version "${GITHUB_REF_NAME#v}" --wait --json
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
