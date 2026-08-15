@@ -45,4 +45,4 @@
 | 版本 | 命令层 | 模块层 | 场景层 | 结论 |
 |---|---|---|---|---|
 | v0.6.15 | 3/9 已绿（restore/reset 命令层） | 19/19（index/fsutil 已补） | 1/8 已绿（空仓库首同步） | 补测中，测试1号第二批 |
-| v0.6.18+ | 9/9 全绿 | 19/19 | 9/9 全绿 | SOP 对齐整改：CI 修复（aheadBehind 边界）+ lint/format 门禁 + README/docs 补齐 |
+| v0.6.19+ | 9/9 全绿 | 19/19 | 9/9 全绿 | SOP 对齐整改：CI 修复（aheadBehind 边界）+ lint/format 门禁 + README/docs 补齐 |
