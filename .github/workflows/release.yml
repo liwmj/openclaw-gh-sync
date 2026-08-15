@@ -23,6 +23,6 @@ jobs:
         with:
           generate_release_notes: true
       - name: Publish to ClawHub
-        run: npx clawhub package publish . --version "${GITHUB_REF_NAME#v}" --wait --json
-        env:
-          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
+        run: |
+          npx clawhub auth login --token "${{ secrets.CLAWHUB_TOKEN }}" --label "github-actions"
+          npx clawhub package publish . --version "${GITHUB_REF_NAME#v}" --wait --json
