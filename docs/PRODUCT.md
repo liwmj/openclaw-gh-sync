@@ -72,11 +72,11 @@ openclaw gh-sync status        # 显示配置信息、同步状态
 | `exclude` | 内置列表 | 排除的 glob 模式（logs、node_modules、gh-sync 自身等） |
 | `pushDebounceMs` | `2000` | 本地变更推送的防抖窗口（毫秒） |
 | `pollIntervalSec` | `60` | 远端变更轮询间隔（秒，≥5） |
-| `backupIntervalH` | `6` | 定时备份间隔（小时，≥0，0=停用定时备份） |
+| `backupIntervalH` | `0` | 定时备份间隔（小时，≥0，默认 0=停用定时备份） |
 | `backupRetain` | `6` | 备份存档保留数量 |
 | `gitCryptEnabled` | `false` | 是否启用 git-crypt 加密敏感路径 |
 | `syncStrategy` | `merge` | 首次/变更同步策略：`merge` 或 `replace-local` |
-| `gitTimeoutMs` | `30000` | git 操作 block 超时（毫秒，≥5000）；慢网络可调大，restore 跨实例 fetch 自动放宽至 max(gitTimeoutMs, 180000) |
+| `gitTimeoutMs` | `60000` | git 操作 block 超时（毫秒，≥5000）；慢网络可调大，restore 跨实例 fetch 自动放宽至 max(gitTimeoutMs, 180000) |
 | `gitignoreExtras` | `[]` | 追加到 .gitignore 的忽略规则（如 `*.tmp`），写在 managed 区块内 |
 | `forceInclude` | `[]` | 强制放行同步的 glob（生成 `!` 反选规则，覆盖默认忽略，如 `**/*.jsonl` 可同步会话文件） |
 
