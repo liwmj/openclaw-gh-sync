@@ -27,9 +27,9 @@ export class GitOps {
         LANG: "C",
         LC_ALL: "C",
         LC_MESSAGES: "C",
-        // Bug B 修复：http(s) 传输阶段无数据超 30s 时 git 自身中止，防止超时后子进程残留累积
+        // Bug B 修复：http(s) 传输阶段无数据超 60s 时 git 自身中止，防止超时后子进程残留累积（0.6.22 从 30s 放宽，大文件 push 慢网络更稳）
         GIT_HTTP_LOW_SPEED_LIMIT: "1",
-        GIT_HTTP_LOW_SPEED_TIME: "30",
+        GIT_HTTP_LOW_SPEED_TIME: "60",
       },
     );
   }

@@ -186,10 +186,10 @@ openclaw gh-sync restore backup-2026-08-10.tar.gz --yes
   ],
   "pushDebounceMs": 2000, // 文件变更后等待多久再提交推送（毫秒）
   "pollIntervalSec": 60, // 远程拉取间隔（秒），最小 5 秒
-  "backupIntervalH": 6, // 定时备份间隔（小时），0 = 停用定时备份
+  "backupIntervalH": 0, // 定时备份间隔（小时），默认 0 = 停用定时备份
   "backupRetain": 6, // 保留最近多少个备份存档（超出自动删除）
   "gitCryptEnabled": false, // 是否启用 git-crypt 加密（默认关闭）
-  "gitTimeoutMs": 30000, // git 操作超时（毫秒）；慢网络可调大，restore 跨实例 fetch 自动放宽至 max(gitTimeoutMs, 180000)
+  "gitTimeoutMs": 60000, // git 操作超时（毫秒）；慢网络可调大，restore 跨实例 fetch 自动放宽至 max(gitTimeoutMs, 180000)
   "gitignoreExtras": [], // 追加到 .gitignore 的忽略规则，如 ["*.tmp"]
   "forceInclude": [], // 强制放行同步的 glob，如 ["**/*.jsonl"] 可同步会话文件
 }

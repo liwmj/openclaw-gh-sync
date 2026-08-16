@@ -25,11 +25,11 @@ export const DEFAULT_CONFIG: SyncConfig = {
   exclude: [...DEFAULT_EXCLUDE],
   pushDebounceMs: 2000,
   pollIntervalSec: 60,
-  backupIntervalH: 6,
+  backupIntervalH: 0,
   backupRetain: 6,
   gitCryptEnabled: false,
   syncStrategy: "merge",
-  gitTimeoutMs: 30_000,
+  gitTimeoutMs: 60_000,
 };
 
 const NAME_RE = /[^a-z0-9-]/g;
